@@ -9,7 +9,7 @@ py_test(
 py_test(
     name = "test_002",
     srcs = ["test_002.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -27,7 +27,7 @@ py_test(
 py_test(
     name = "test_005",
     srcs = ["test_005.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -69,7 +69,7 @@ py_test(
 py_test(
     name = "test_012",
     srcs = ["test_012.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -81,7 +81,7 @@ py_test(
 py_test(
     name = "test_014",
     srcs = ["test_014.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(

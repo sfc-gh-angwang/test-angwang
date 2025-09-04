@@ -9,7 +9,7 @@ py_test(
 py_test(
     name = "test_142",
     srcs = ["test_142.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -69,13 +69,13 @@ py_test(
 py_test(
     name = "test_152",
     srcs = ["test_152.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
     name = "test_153",
     srcs = ["test_153.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(

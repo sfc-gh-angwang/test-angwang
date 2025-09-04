@@ -1,13 +1,13 @@
 # Simplified Buildkite pipeline - IT tests only
-# This pipeline focuses solely on running tests tagged with "it-test"
+# This pipeline focuses solely on running tests tagged with "small-it"
 
 steps:
-  # Generate and upload dynamic pipeline for it-test targets only
+  # Generate and upload dynamic pipeline for small-it targets only
   - label: ":pipeline: Generate IT Test Pipeline"
     command: |
-      echo "--- :mag: Generating dynamic pipeline for it-test targets"
+      echo "--- :mag: Generating dynamic pipeline for small-it targets"
       .buildkite/generate-test-pipeline.sh | buildkite-agent pipeline upload
-    key: "it-test-pipeline-upload"
+    key: "small-it-pipeline-upload"
     timeout_in_minutes: 60
     agents:
       queue: "test-agent"

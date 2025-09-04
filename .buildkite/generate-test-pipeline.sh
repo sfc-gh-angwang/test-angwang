@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Dynamic pipeline generator for Bazel tests with "it-test" tag
-# This script queries Bazel for all targets tagged with "it-test" and creates individual test jobs
+# Dynamic pipeline generator for Bazel tests with "small-it" tag
+# This script queries Bazel for all targets tagged with "small-it" and creates individual test jobs
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ log() {
     echo "$@" >&2
 }
 
-log "--- :bazel: Querying for it-test targets"
+log "--- :bazel: Querying for small-it targets"
 
 # Check if Bazel is available
 if ! command -v bazel >/dev/null 2>&1; then
@@ -24,9 +24,9 @@ if [ ! -f "WORKSPACE" ] && [ ! -f "MODULE.bazel" ]; then
     exit 1
 fi
 
-# Query Bazel for all targets with the "it-test" tag
-log "Running: bazel query 'attr(tags, \"it-test\", //tests/...)'"
-IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>/dev/null | grep -E '^//tests/' || {
+# Query Bazel for all targets with the "small-it" tag
+log "Running: bazel query 'attr(tags, \"small-it\", //tests/...)'"
+IT_TEST_TARGETS=$(bazel query 'attr(tags, "small-it", //tests/...)' 2>/dev/null | grep -E '^//tests/' || {
     log "Error: Failed to query Bazel targets"
     log "Bazel query command failed. This might be due to:"
     log "1. Bazel workspace not properly initialized"
@@ -38,21 +38,21 @@ IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>/dev/null |
 
 # Check if we found any targets
 if [ -z "$IT_TEST_TARGETS" ]; then
-    log "No targets found with 'it-test' tag"
+    log "No targets found with 'small-it' tag"
     exit 1
 fi
 
 # Count the targets for logging
 TARGET_COUNT=$(echo "$IT_TEST_TARGETS" | wc -l | tr -d ' ')
-TOTAL_JOBS=$((TARGET_COUNT * 65))
-log "Found $TARGET_COUNT targets with 'it-test' tag"
-log "Generating $TOTAL_JOBS total jobs (65 iterations × $TARGET_COUNT targets)"
+TOTAL_JOBS=$((TARGET_COUNT * 200))
+log "Found $TARGET_COUNT targets with 'small-it' tag"
+log "Generating $TOTAL_JOBS total jobs (200 iterations × $TARGET_COUNT targets)"
 
 # Begin the pipeline YAML
 echo "steps:"
 
 # Generate grouped steps by iteration using build matrix
-for iteration in $(seq 1 65); do
+for iteration in $(seq 1 200); do
     log "Generating iteration group $iteration with matrix for all $TARGET_COUNT targets"
     
     cat << EOF

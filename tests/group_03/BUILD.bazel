@@ -3,7 +3,7 @@ load("@rules_python//python:defs.bzl", "py_test")
 py_test(
     name = "test_041",
     srcs = ["test_041.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -63,7 +63,7 @@ py_test(
 py_test(
     name = "test_051",
     srcs = ["test_051.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -93,7 +93,7 @@ py_test(
 py_test(
     name = "test_056",
     srcs = ["test_056.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(

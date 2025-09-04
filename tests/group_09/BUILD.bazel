@@ -15,13 +15,13 @@ py_test(
 py_test(
     name = "test_163",
     srcs = ["test_163.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
     name = "test_164",
     srcs = ["test_164.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -39,7 +39,7 @@ py_test(
 py_test(
     name = "test_167",
     srcs = ["test_167.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -57,7 +57,7 @@ py_test(
 py_test(
     name = "test_170",
     srcs = ["test_170.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -69,7 +69,7 @@ py_test(
 py_test(
     name = "test_172",
     srcs = ["test_172.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
@@ -81,7 +81,7 @@ py_test(
 py_test(
     name = "test_174",
     srcs = ["test_174.py"],
-    tags = ["it-test"],
+    tags = ["it-test", "small-it"],
 )
 
 py_test(
