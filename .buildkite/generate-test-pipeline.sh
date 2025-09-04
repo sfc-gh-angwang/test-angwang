@@ -44,17 +44,19 @@ fi
 
 # Count the targets for logging
 TARGET_COUNT=$(echo "$IT_TEST_TARGETS" | wc -l | tr -d ' ')
+TOTAL_JOBS=$((TARGET_COUNT * 650))
 log "Found $TARGET_COUNT targets with 'it-test' tag"
+log "Generating $TOTAL_JOBS total jobs (650 iterations × $TARGET_COUNT targets)"
 
 # Begin the pipeline YAML
 echo "steps:"
 
 # Add a group step to organize all the test jobs
-echo "  - group: \":test_tube: Integration Tests ($TARGET_COUNT tests)\""
+echo "  - group: \":test_tube: Load Test - $TOTAL_JOBS Jobs ($TARGET_COUNT targets × 650 iterations)\""
 echo "    key: \"it-tests\""
 echo "    steps:"
 
-# Generate a test step for each target
+# Generate a test step for each target with 650 iterations for load testing
 while IFS= read -r target; do
     # Skip empty lines
     if [ -z "$target" ]; then
@@ -64,13 +66,15 @@ while IFS= read -r target; do
     # Extract a clean name for the step label (remove //tests/ prefix and : separators)
     CLEAN_NAME=$(echo "$target" | sed 's|//tests/||' | sed 's|:|/|')
     
-    # Generate the test step with proper YAML escaping
-    STEP_KEY=$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||' | sed 's|//||g')
-    
-    cat << EOF
-      - label: ":test_tube: $CLEAN_NAME"
+    # Generate 650 iterations of each test for load testing
+    for iteration in $(seq 1 650); do
+        # Generate the test step with proper YAML escaping and iteration suffix
+        STEP_KEY=$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||' | sed 's|//||g')-iter-$iteration
+        
+        cat << EOF
+      - label: ":test_tube: $CLEAN_NAME (iter-$iteration)"
         command: |
-          echo "--- Running test: $target"
+          echo "--- Running test iteration $iteration: $target"
           bazel test "$target" --test_output=errors --test_summary=detailed
         key: "$STEP_KEY"
         timeout_in_minutes: 10
@@ -78,6 +82,7 @@ while IFS= read -r target; do
           queue: "test-agent"
         env:
           MY_TEST_ENV: "magic_secret"
+          TEST_ITERATION: "$iteration"
         retry:
           automatic:
             - exit_status: "*"
@@ -85,6 +90,7 @@ while IFS= read -r target; do
         artifact_paths:
           - "bazel-testlogs/**/*"
 EOF
+    done
 
 done <<< "$IT_TEST_TARGETS"
 
