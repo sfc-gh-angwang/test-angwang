@@ -1,31 +1,67 @@
 steps:
-  - command: "echo hello test type 1"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 2"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 3"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 4"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 5"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 6"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 7"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 8"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 9"
-    label: "echo %n"
-    parallelism: 50
-  - command: "echo hello test type 10"
-    label: "echo %n"
-    parallelism: 50
+  - group: ":test_tube: Test Group 1"
+    key: "test-group-1"
+    steps:
+      - command: "echo hello test type 1"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 2"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 3"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 4"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 5"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 6"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 7"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 8"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 9"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 10"
+        label: "echo %n"
+        parallelism: 50
+  - group: ":test_tube: Test Group 2"
+    key: "test-group-2"
+    steps:
+      - command: "echo hello test type 1"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 2"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 3"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 4"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 5"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 6"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 7"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 8"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 9"
+        label: "echo %n"
+        parallelism: 50
+      - command: "echo hello test type 10"
+        label: "echo %n"
+        parallelism: 50
