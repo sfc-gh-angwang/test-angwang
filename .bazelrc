@@ -1,0 +1,8 @@
+# Common build options
+build --enable_bzlmod
+build --java_runtime_version=remotejdk_11
+build --tool_java_runtime_version=remotejdk_11
+
+# Test options
+test --test_output=errors
+test --test_summary=detailed
