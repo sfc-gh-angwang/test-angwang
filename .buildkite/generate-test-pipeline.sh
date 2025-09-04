@@ -12,9 +12,27 @@ log() {
 
 log "--- :bazel: Querying for it-test targets"
 
+# Check if Bazel is available
+if ! command -v bazel >/dev/null 2>&1; then
+    log "Error: Bazel is not installed or not in PATH"
+    exit 1
+fi
+
+# Check if we're in a Bazel workspace
+if [ ! -f "WORKSPACE" ] && [ ! -f "MODULE.bazel" ]; then
+    log "Error: Not in a Bazel workspace (no WORKSPACE or MODULE.bazel file found)"
+    exit 1
+fi
+
 # Query Bazel for all targets with the "it-test" tag
-IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>/dev/null || {
+log "Running: bazel query 'attr(tags, \"it-test\", //tests/...)'"
+IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>&1 || {
     log "Error: Failed to query Bazel targets"
+    log "Bazel query command failed. This might be due to:"
+    log "1. Bazel workspace not properly initialized"
+    log "2. Missing dependencies"
+    log "3. Syntax error in BUILD files"
+    log "4. Network issues downloading dependencies"
     exit 1
 })
 
