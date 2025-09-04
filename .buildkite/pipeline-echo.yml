@@ -17,7 +17,7 @@ steps:
       echo "✅ All pipeline chunks have been uploaded!"
       echo "Check the Buildkite dashboard to see all 40 pipelines running"
     agents:
-      queue: "default"
+      queue: "test-agent"
     
   - wait: ~
     continue_on_failure: true
@@ -39,4 +39,4 @@ steps:
       echo ""
       echo "🔍 Monitor all pipelines in your Buildkite dashboard"
     agents:
-      queue: "default"
+      queue: "test-agent"
