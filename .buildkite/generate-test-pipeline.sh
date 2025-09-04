@@ -2,8 +2,22 @@
 
 # Dynamic pipeline generator for Bazel tests with "small-it" tag
 # This script queries Bazel for all targets tagged with "small-it" and creates individual test jobs
+#
+# Usage: generate-test-pipeline.sh [ITERATIONS]
+#   ITERATIONS: Number of test iterations to run (default: 200)
 
 set -euo pipefail
+
+# Set default iterations or use provided argument
+ITERATIONS=${1:-200}
+
+# Validate iterations parameter
+if ! [[ "$ITERATIONS" =~ ^[0-9]+$ ]] || [ "$ITERATIONS" -le 0 ]; then
+    echo "Error: ITERATIONS must be a positive integer" >&2
+    echo "Usage: $0 [ITERATIONS]" >&2
+    echo "  ITERATIONS: Number of test iterations to run (default: 200)" >&2
+    exit 1
+fi
 
 # Function to log to stderr
 log() {
@@ -44,15 +58,16 @@ fi
 
 # Count the targets for logging
 TARGET_COUNT=$(echo "$IT_TEST_TARGETS" | wc -l | tr -d ' ')
-TOTAL_JOBS=$((TARGET_COUNT * 200))
+TOTAL_JOBS=$((TARGET_COUNT * ITERATIONS))
+
 log "Found $TARGET_COUNT targets with 'small-it' tag"
-log "Generating $TOTAL_JOBS total jobs (200 iterations × $TARGET_COUNT targets)"
+log "Generating $TOTAL_JOBS total jobs ($ITERATIONS iterations × $TARGET_COUNT targets)"
 
 # Begin the pipeline YAML
 echo "steps:"
 
 # Generate grouped steps by iteration using build matrix
-for iteration in $(seq 1 200); do
+for iteration in $(seq 1 $ITERATIONS); do
     log "Generating iteration group $iteration with matrix for all $TARGET_COUNT targets"
     
     cat << EOF

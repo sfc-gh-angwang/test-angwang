@@ -6,7 +6,7 @@ steps:
   - label: ":pipeline: Generate IT Test Pipeline"
     command: |
       echo "--- :mag: Generating dynamic pipeline for small-it targets"
-      .buildkite/generate-test-pipeline.sh | buildkite-agent pipeline upload
+      .buildkite/generate-test-pipeline.sh 50| buildkite-agent pipeline upload
     key: "small-it-pipeline-upload"
     timeout_in_minutes: 60
     agents:
