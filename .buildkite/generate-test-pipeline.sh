@@ -76,6 +76,8 @@ while IFS= read -r target; do
         timeout_in_minutes: 10
         agents:
           queue: "test-agent"
+        env:
+          MY_TEST_ENV: "magic_secret"
         retry:
           automatic:
             - exit_status: "*"
