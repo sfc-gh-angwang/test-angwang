@@ -1,4 +1,145 @@
 steps:
   - command: "echo hello"
     label: "echo %n"
-    parallelism: 20000
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
+  - command: "echo hello"
+    label: "echo %n"
+    parallelism: 500
