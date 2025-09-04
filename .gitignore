@@ -1,0 +1,47 @@
+# Bazel output directories
+bazel-*
+/bazel-*
+
+# Bazel symlinks (these are created by Bazel and point to output directories)
+bazel-bin
+bazel-genfiles
+bazel-out
+bazel-testlogs
+bazel-workspace
+
+# Bazel internal files
+.bazel
+.bazelrc.user
+
+# Build outputs and artifacts
+*.pyc
+*.pyo
+__pycache__/
+*.so
+*.dylib
+*.dll
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python virtual environments
+venv/
+env/
+.env
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Log files
+*.log
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
