@@ -5,23 +5,28 @@
 
 set -euo pipefail
 
-echo "--- :bazel: Querying for it-test targets"
+# Function to log to stderr
+log() {
+    echo "$@" >&2
+}
+
+log "--- :bazel: Querying for it-test targets"
 
 # Query Bazel for all targets with the "it-test" tag
 IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>/dev/null || {
-    echo "Error: Failed to query Bazel targets"
+    log "Error: Failed to query Bazel targets"
     exit 1
 })
 
 # Check if we found any targets
 if [ -z "$IT_TEST_TARGETS" ]; then
-    echo "No targets found with 'it-test' tag"
+    log "No targets found with 'it-test' tag"
     exit 1
 fi
 
 # Count the targets for logging
 TARGET_COUNT=$(echo "$IT_TEST_TARGETS" | wc -l | tr -d ' ')
-echo "Found $TARGET_COUNT targets with 'it-test' tag"
+log "Found $TARGET_COUNT targets with 'it-test' tag"
 
 # Begin the pipeline YAML
 echo "steps:"
