@@ -1,0 +1,122 @@
+load("@rules_python//python:defs.bzl", "py_test")
+
+py_test(
+    name = "test_081",
+    srcs = ["test_081.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_082",
+    srcs = ["test_082.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_083",
+    srcs = ["test_083.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_084",
+    srcs = ["test_084.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_085",
+    srcs = ["test_085.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_086",
+    srcs = ["test_086.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_087",
+    srcs = ["test_087.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_088",
+    srcs = ["test_088.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_089",
+    srcs = ["test_089.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_090",
+    srcs = ["test_090.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_091",
+    srcs = ["test_091.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_092",
+    srcs = ["test_092.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_093",
+    srcs = ["test_093.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_094",
+    srcs = ["test_094.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_095",
+    srcs = ["test_095.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_096",
+    srcs = ["test_096.py"],
+    tags = ["it-test"],
+)
+
+py_test(
+    name = "test_097",
+    srcs = ["test_097.py"],
+    tags = [],
+)
+
+py_test(
+    name = "test_098",
+    srcs = ["test_098.py"],
+    tags = [],
+)
+
+py_test(
+    name = "test_099",
+    srcs = ["test_099.py"],
+    tags = [],
+)
+
+py_test(
+    name = "test_100",
+    srcs = ["test_100.py"],
+    tags = [],
+)
+
