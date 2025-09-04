@@ -71,6 +71,9 @@ while IFS= read -r target; do
         # Generate the test step with proper YAML escaping and iteration suffix
         STEP_KEY=$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||' | sed 's|//||g')-iter-$iteration
         
+        # Log the job name being generated
+        log "Generating job: $CLEAN_NAME (iter-$iteration) with key: $STEP_KEY"
+        
         cat << EOF
       - label: ":test_tube: $CLEAN_NAME (iter-$iteration)"
         command: |
