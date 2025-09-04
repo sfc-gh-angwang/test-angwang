@@ -41,13 +41,15 @@ while IFS= read -r target; do
     # Extract a clean name for the step label (remove //tests/ prefix and : separators)
     CLEAN_NAME=$(echo "$target" | sed 's|//tests/||' | sed 's|:|/|')
     
-    # Generate the test step
+    # Generate the test step with proper YAML escaping
+    STEP_KEY=$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||' | sed 's|//||g')
+    
     cat << EOF
       - label: ":test_tube: $CLEAN_NAME"
         command: |
           echo "--- Running test: $target"
           bazel test "$target" --test_output=errors --test_summary=detailed
-        key: "$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||')"
+        key: "$STEP_KEY"
         timeout_in_minutes: 10
         retry:
           automatic:
@@ -60,14 +62,15 @@ EOF
 done <<< "$IT_TEST_TARGETS"
 
 # Add a final step that waits for all tests and reports summary
-echo ""
-echo "  - wait: ~"
-echo "    continue_on_failure: true"
-echo ""
-echo "  - label: \":bar_chart: Test Summary\""
-echo "    command: |"
-echo "      echo \"--- :white_check_mark: Integration Test Summary\""
-echo "      echo \"Total tests executed: $TARGET_COUNT\""
-echo "      echo \"All integration tests completed!\""
-echo "    depends_on:"
-echo "      - \"it-tests\""
+cat << 'EOF'
+
+  - wait: ~
+    continue_on_failure: true
+
+  - label: ":bar_chart: Test Summary"
+    command: |
+      echo "--- :white_check_mark: Integration Test Summary"
+      echo "All integration tests completed!"
+    depends_on:
+      - "it-tests"
+EOF
