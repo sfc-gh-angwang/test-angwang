@@ -44,42 +44,31 @@ fi
 
 # Count the targets for logging
 TARGET_COUNT=$(echo "$IT_TEST_TARGETS" | wc -l | tr -d ' ')
-TOTAL_JOBS=$((TARGET_COUNT * 650))
+TOTAL_JOBS=$((TARGET_COUNT * 65))
 log "Found $TARGET_COUNT targets with 'it-test' tag"
-log "Generating $TOTAL_JOBS total jobs (650 iterations × $TARGET_COUNT targets)"
+log "Generating $TOTAL_JOBS total jobs (65 iterations × $TARGET_COUNT targets)"
 
 # Begin the pipeline YAML
 echo "steps:"
 
 # Add a group step to organize all the test jobs
-echo "  - group: \":test_tube: Load Test - $TOTAL_JOBS Jobs ($TARGET_COUNT targets × 650 iterations)\""
+echo "  - group: \":test_tube: Load Test - $TOTAL_JOBS Jobs ($TARGET_COUNT targets × 65 iterations)\""
 echo "    key: \"it-tests\""
 echo "    steps:"
 
-# Generate a test step for each target with 650 iterations for load testing
-while IFS= read -r target; do
-    # Skip empty lines
-    if [ -z "$target" ]; then
-        continue
-    fi
+# Generate grouped steps by iteration using build matrix
+for iteration in $(seq 1 65); do
+    log "Generating iteration group $iteration with matrix for all $TARGET_COUNT targets"
     
-    # Extract a clean name for the step label (remove //tests/ prefix and : separators)
-    CLEAN_NAME=$(echo "$target" | sed 's|//tests/||' | sed 's|:|/|')
-    
-    # Generate 650 iterations of each test for load testing
-    for iteration in $(seq 1 650); do
-        # Generate the test step with proper YAML escaping and iteration suffix
-        STEP_KEY=$(echo "$target" | sed 's|[/:]|-|g' | sed 's|^--||' | sed 's|//||g')-iter-$iteration
-        
-        # Log the job name being generated
-        log "Generating job: $CLEAN_NAME (iter-$iteration) with key: $STEP_KEY"
-        
-        cat << EOF
-      - label: ":test_tube: $CLEAN_NAME (iter-$iteration)"
+    cat << EOF
+  - group: ":test_tube: Iteration $iteration"
+    key: "iteration-$iteration"
+    steps:
+      - label: ":test_tube: All Tests (iter-$iteration)"
         command: |
-          echo "--- Running test iteration $iteration: $target"
-          bazel test "$target" --test_output=errors --test_summary=detailed
-        key: "$STEP_KEY"
+          echo "--- Running test iteration $iteration: {{matrix}}"
+          bazel test "{{matrix}}" --test_output=errors --test_summary=detailed
+        key: "matrix-tests-iter-$iteration"
         timeout_in_minutes: 10
         agents:
           queue: "test-agent"
@@ -92,10 +81,20 @@ while IFS= read -r target; do
               limit: 2
         artifact_paths:
           - "bazel-testlogs/**/*"
+        matrix:
 EOF
-    done
 
-done <<< "$IT_TEST_TARGETS"
+    # Add all test targets to the matrix for this iteration
+    while IFS= read -r target; do
+        # Skip empty lines
+        if [ -z "$target" ]; then
+            continue
+        fi
+        echo "          - \"$target\""
+    done <<< "$IT_TEST_TARGETS"
+
+    echo ""  # Add blank line between iterations
+done
 
 # Add a final step that waits for all tests and reports summary
 cat << 'EOF'
