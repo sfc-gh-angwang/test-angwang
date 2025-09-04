@@ -9,3 +9,5 @@ steps:
       .buildkite/generate-test-pipeline.sh | buildkite-agent pipeline upload
     key: "it-test-pipeline-upload"
     timeout_in_minutes: 5
+    agents:
+      queue: "test-agent"

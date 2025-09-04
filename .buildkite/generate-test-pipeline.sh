@@ -26,7 +26,7 @@ fi
 
 # Query Bazel for all targets with the "it-test" tag
 log "Running: bazel query 'attr(tags, \"it-test\", //tests/...)'"
-IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>&1 || {
+IT_TEST_TARGETS=$(bazel query 'attr(tags, "it-test", //tests/...)' 2>/dev/null | grep -E '^//tests/' || {
     log "Error: Failed to query Bazel targets"
     log "Bazel query command failed. This might be due to:"
     log "1. Bazel workspace not properly initialized"
@@ -74,6 +74,8 @@ while IFS= read -r target; do
           bazel test "$target" --test_output=errors --test_summary=detailed
         key: "$STEP_KEY"
         timeout_in_minutes: 10
+        agents:
+          queue: "test-agent"
         retry:
           automatic:
             - exit_status: "*"
@@ -94,6 +96,8 @@ cat << 'EOF'
     command: |
       echo "--- :white_check_mark: Integration Test Summary"
       echo "All integration tests completed!"
+    agents:
+      queue: "test-agent"
     depends_on:
       - "it-tests"
 EOF
