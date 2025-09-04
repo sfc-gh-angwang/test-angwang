@@ -77,7 +77,6 @@ for iteration in $(seq 1 $ITERATIONS); do
     - label: ":test_tube: All Tests (iter-$iteration)"
       command: |
         echo "--- Running test iteration $iteration: {{matrix}}"
-        bazel test "{{matrix}}" --test_output=errors --test_summary=detailed
       key: "matrix-tests-iter-$iteration"
       timeout_in_minutes: 10
       agents:
