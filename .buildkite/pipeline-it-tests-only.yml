@@ -8,6 +8,6 @@ steps:
       echo "--- :mag: Generating dynamic pipeline for it-test targets"
       .buildkite/generate-test-pipeline.sh | buildkite-agent pipeline upload
     key: "it-test-pipeline-upload"
-    timeout_in_minutes: 5
+    timeout_in_minutes: 60
     agents:
       queue: "test-agent"
