@@ -73,6 +73,7 @@ for iteration in $(seq 1 $ITERATIONS); do
     cat << EOF
 - group: ":test_tube: Iteration $iteration ($TARGET_COUNT tests)"
   key: "iteration-$iteration"
+  parallelism: 50
   steps:
     - label: ":test_tube: All Tests (iter-$iteration)"
       command: |
