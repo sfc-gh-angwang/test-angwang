@@ -51,37 +51,32 @@ log "Generating $TOTAL_JOBS total jobs (65 iterations × $TARGET_COUNT targets)"
 # Begin the pipeline YAML
 echo "steps:"
 
-# Add a group step to organize all the test jobs
-echo "  - group: \":test_tube: Load Test - $TOTAL_JOBS Jobs ($TARGET_COUNT targets × 65 iterations)\""
-echo "    key: \"it-tests\""
-echo "    steps:"
-
 # Generate grouped steps by iteration using build matrix
 for iteration in $(seq 1 65); do
     log "Generating iteration group $iteration with matrix for all $TARGET_COUNT targets"
     
     cat << EOF
-  - group: ":test_tube: Iteration $iteration"
-    key: "iteration-$iteration"
-    steps:
-      - label: ":test_tube: All Tests (iter-$iteration)"
-        command: |
-          echo "--- Running test iteration $iteration: {{matrix}}"
-          bazel test "{{matrix}}" --test_output=errors --test_summary=detailed
-        key: "matrix-tests-iter-$iteration"
-        timeout_in_minutes: 10
-        agents:
-          queue: "test-agent"
-        env:
-          MY_TEST_ENV: "magic_secret"
-          TEST_ITERATION: "$iteration"
-        retry:
-          automatic:
-            - exit_status: "*"
-              limit: 2
-        artifact_paths:
-          - "bazel-testlogs/**/*"
-        matrix:
+- group: ":test_tube: Iteration $iteration ($TARGET_COUNT tests)"
+  key: "iteration-$iteration"
+  steps:
+    - label: ":test_tube: All Tests (iter-$iteration)"
+      command: |
+        echo "--- Running test iteration $iteration: {{matrix}}"
+        bazel test "{{matrix}}" --test_output=errors --test_summary=detailed
+      key: "matrix-tests-iter-$iteration"
+      timeout_in_minutes: 10
+      agents:
+        queue: "test-agent"
+      env:
+        MY_TEST_ENV: "magic_secret"
+        TEST_ITERATION: "$iteration"
+      retry:
+        automatic:
+          - exit_status: "*"
+            limit: 2
+      artifact_paths:
+        - "bazel-testlogs/**/*"
+      matrix:
 EOF
 
     # Add all test targets to the matrix for this iteration
@@ -90,24 +85,23 @@ EOF
         if [ -z "$target" ]; then
             continue
         fi
-        echo "          - \"$target\""
+        echo "        - \"$target\""
     done <<< "$IT_TEST_TARGETS"
 
     echo ""  # Add blank line between iterations
 done
 
 # Add a final step that waits for all tests and reports summary
-cat << 'EOF'
+cat << EOF
 
-  - wait: ~
-    continue_on_failure: true
+- wait: ~
+  continue_on_failure: true
 
-  - label: ":bar_chart: Test Summary"
-    command: |
-      echo "--- :white_check_mark: Integration Test Summary"
-      echo "All integration tests completed!"
-    agents:
-      queue: "test-agent"
-    depends_on:
-      - "it-tests"
+- label: ":bar_chart: Test Summary ($TOTAL_JOBS jobs completed)"
+  command: |
+    echo "--- :white_check_mark: Integration Test Summary"
+    echo "Total jobs executed: $TOTAL_JOBS"
+    echo "All integration tests completed!"
+  agents:
+    queue: "test-agent"
 EOF
