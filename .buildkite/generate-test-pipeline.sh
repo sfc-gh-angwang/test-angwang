@@ -75,6 +75,7 @@ for iteration in $(seq 1 $ITERATIONS); do
   key: "iteration-$iteration"
   steps:
     - label: ":test_tube: All Tests (iter-$iteration)"
+      parallelism: 500
       command: |
         echo "--- Running test iteration $iteration: {{matrix}}"
       key: "matrix-tests-iter-$iteration"
