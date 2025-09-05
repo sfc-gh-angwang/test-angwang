@@ -1,0 +1,9 @@
+steps:
+  - label: "test step"
+    command: |
+      # Method 1: Set environment variable in the command
+      export TEST_ENV=test_env
+    key: "test-step"
+    timeout_in_minutes: 60
+    agents:
+      queue: "test-agent"
