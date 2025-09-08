@@ -1,20 +1,47 @@
 #!/bin/bash
 
+# Enable extended globbing for ** patterns (if supported)
+shopt -s nullglob 2>/dev/null || true
+
 # Check if file glob pattern is provided
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <file_glob_pattern>"
     echo "Example: $0 '*.xml'"
-    echo "Example: $0 'test-results/**/*.xml'"
+    echo "Example: $0 'bazel-testlogs/**/*.xml'"
     exit 1
 fi
 
 FILE_GLOB="$1"
 
-# Find all files matching the glob pattern
-for file in $FILE_GLOB; do
-    # Check if file exists (in case glob doesn't match anything)
+# Use find command to locate files matching the pattern
+# Convert glob pattern to find-compatible pattern
+if [[ "$FILE_GLOB" == *"**"* ]]; then
+    # Handle recursive patterns like bazel-testlogs/**/*.xml
+    base_dir=$(echo "$FILE_GLOB" | cut -d'*' -f1)
+    file_pattern=$(echo "$FILE_GLOB" | sed 's/.*\*\*\///')
+    files=($(find "$base_dir" -name "$file_pattern" -type f 2>/dev/null))
+else
+    # Handle simple patterns like *.xml
+    files=($(find . -maxdepth 1 -name "$FILE_GLOB" -type f 2>/dev/null))
+fi
+
+# If find approach didn't work, try direct glob expansion
+if [ ${#files[@]} -eq 0 ]; then
+    files=($FILE_GLOB)
+fi
+
+# Check if any files were found
+if [ ${#files[@]} -eq 0 ] || [ ! -f "${files[0]}" ]; then
+    echo "Warning: No files found matching pattern '$FILE_GLOB'"
+    exit 1
+fi
+
+echo "Found ${#files[@]} file(s) matching pattern '$FILE_GLOB'"
+
+# Process each file
+for file in "${files[@]}"; do
+    # Double-check file exists
     if [ ! -f "$file" ]; then
-        echo "Warning: No files found matching pattern '$FILE_GLOB'"
         continue
     fi
     
