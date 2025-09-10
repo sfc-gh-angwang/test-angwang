@@ -5,8 +5,6 @@ set -euo pipefail
 # Buildkite Test Analytics Upload Plugin
 # Uploads JUnit XML test results to Buildkite Test Analytics with optional redaction
 
-echo "📊 Starting test analytics upload (redact: $redact, parallelism: $upload_parallelism)"
-
 # Get plugin configuration from environment variables
 # Buildkite sets plugin configuration as BUILDKITE_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>
 file_pattern="${BUILDKITE_PLUGIN_TEST_ANALYTICS_FILE_PATTERN:-}"
@@ -15,6 +13,8 @@ analytics_token_env="${BUILDKITE_PLUGIN_TEST_ANALYTICS_ANALYTICS_TOKEN_ENV:-BUIL
 upload_timeout="${BUILDKITE_PLUGIN_TEST_ANALYTICS_UPLOAD_TIMEOUT:-30}"
 max_file_size="${BUILDKITE_PLUGIN_TEST_ANALYTICS_MAX_FILE_SIZE:-10}"
 upload_parallelism="${BUILDKITE_PLUGIN_TEST_ANALYTICS_UPLOAD_PARALLELISM:-5}"
+
+echo "📊 Starting test analytics upload (redact: $redact, parallelism: $upload_parallelism)"
 
 # Validate required configuration
 if [[ "$file_pattern" == "null" || -z "$file_pattern" ]]; then
