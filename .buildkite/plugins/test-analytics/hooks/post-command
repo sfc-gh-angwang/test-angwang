@@ -56,22 +56,20 @@ redact_xml() {
     local output_file="$2"
     
     if [[ "$redact" == "true" ]]; then
-        echo "🔒 Redacting all sensitive data in $(basename "$input_file")..."
-        
         # Get the directory where this script is located
         local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         local python_redactor="$script_dir/../redact_xml.py"
         
         # Execute Python redaction script (redacts everything by default)
         if python3 "$python_redactor" "$input_file" "$output_file"; then
-            echo "✅ Successfully redacted $(basename "$input_file")"
+            # Redaction successful, continue silently
+            true
         else
-            echo "❌ Failed to redact $(basename "$input_file"), copying original file"
-            cp "$input_file" "$output_file"
+            echo "❌ Failed to redact $(basename "$input_file"), skipping upload"
             return 1
         fi
     else
-        echo "📋 No redaction requested, copying $(basename "$input_file") as-is"
+        # No redaction requested, copy as-is
         cp "$input_file" "$output_file"
     fi
 }
@@ -80,9 +78,7 @@ redact_xml() {
 upload_file() {
     local file_path="$1"
     local file_name=$(basename "$file_path")
-    
-    echo "📤 Uploading $file_name to Buildkite Test Analytics..."
-    
+        
     # Check file size (compatible with both Linux and macOS)
     local file_size_bytes
     if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -117,7 +113,6 @@ upload_file() {
         local response_body="${upload_response%???}"
         
         if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
-            echo "✅ Successfully uploaded $file_name (HTTP $http_code)"
             return 0
         else
             echo "❌ Failed to upload $file_name (HTTP $http_code)"
