@@ -5,7 +5,7 @@ set -euo pipefail
 # Buildkite Test Analytics Upload Plugin
 # Uploads JUnit XML test results to Buildkite Test Analytics with optional redaction
 
-echo "📊 Starting test analytics upload process..."
+echo "📊 Starting test analytics upload (redact: $redact, parallelism: $upload_parallelism)"
 
 # Get plugin configuration from environment variables
 # Buildkite sets plugin configuration as BUILDKITE_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>
@@ -139,7 +139,6 @@ failed_count=0
 
 # Use find with the glob pattern (handle symlinks properly)
 # Use both native and symlink-aware search, then union the results
-echo "🔍 Searching for files with pattern: $file_pattern"
 
 # Extract base directory from pattern (everything before the first **)
 base_dir=""
@@ -150,28 +149,25 @@ else
     file_suffix="$file_pattern"
 fi
 
-echo "📁 Base directory: ${base_dir:-'.'}, File pattern: $file_suffix"
-
 # Collect files from both approaches
 declare -A unique_files
-file_count_found=0
+standard_count=0
+symlink_count=0
 
 # Approach 1: Standard find (without following symlinks)
-echo "🔍 Standard search..."
 while IFS= read -r -d '' xml_file; do
     if [[ -f "$xml_file" ]]; then
         unique_files["$xml_file"]=1
-        file_count_found=$((file_count_found + 1))
+        standard_count=$((standard_count + 1))
     fi
 done < <(find ${base_dir:-.} -path "./$file_pattern" -type f -print0 2>/dev/null)
 
 # Approach 2: Symlink-aware search (if base directory exists and might be symlinked)
 if [[ -n "$base_dir" && -d "$base_dir" ]]; then
-    echo "🔗 Symlink-aware search in $base_dir..."
     while IFS= read -r -d '' xml_file; do
         if [[ -f "$xml_file" ]]; then
             unique_files["$xml_file"]=1
-            file_count_found=$((file_count_found + 1))
+            symlink_count=$((symlink_count + 1))
         fi
     done < <(find -L "$base_dir" -name "*.xml" -type f -print0 2>/dev/null)
 fi
@@ -182,10 +178,8 @@ for file in "${!unique_files[@]}"; do
     xml_files+=("$file")
 done
 
-echo "🔍 Found ${#xml_files[@]} unique XML files (${file_count_found} total matches)"
+echo "📁 Found ${#xml_files[@]} XML files (standard: $standard_count, symlink: $symlink_count)"
 
-# Process files with parallel uploads
-echo "🚀 Starting to process files with $upload_parallelism parallel jobs..."
 
 # Function to process a batch of files
 process_batch() {
@@ -193,7 +187,7 @@ process_batch() {
     shift  # Remove batch_id from arguments, remaining args are the files
     local files=("$@")
     
-    echo "🔄 [Batch $batch_id] Processing ${#files[@]} files..."
+    echo "🔄 [Batch $batch_id] Start processing ${#files[@]} files"
     
     # Create subdirectory for this batch to avoid collisions
     local batch_dir="$temp_dir/batch_${batch_id}"
@@ -202,26 +196,23 @@ process_batch() {
     local batch_success=0
     local batch_failed=0
     local file_id=1
+    local uploaded_files=()
     
     # Process each file in this batch sequentially
     for xml_file in "${files[@]}"; do
         if [[ -n "$xml_file" && -f "$xml_file" ]]; then
             local processed_file="$batch_dir/processed_result_${file_id}.xml"
             
-            echo "🔄 [Batch $batch_id] Processing: $(basename "$xml_file")"
-            
             # Process XML file (redact if requested, otherwise copy as-is)
             if redact_xml "$xml_file" "$processed_file"; then
                 # Upload the file
                 if upload_file "$processed_file"; then
-                    echo "✅ [Batch $batch_id] Upload successful: $(basename "$xml_file")"
                     batch_success=$((batch_success + 1))
+                    uploaded_files+=("processed_result_${file_id}.xml")
                 else
-                    echo "❌ [Batch $batch_id] Upload failed: $(basename "$xml_file")"
                     batch_failed=$((batch_failed + 1))
                 fi
             else
-                echo "❌ [Batch $batch_id] XML processing failed: $(basename "$xml_file")"
                 batch_failed=$((batch_failed + 1))
             fi
             
@@ -232,7 +223,8 @@ process_batch() {
     # Write batch results
     echo "$batch_success" > "$temp_dir/batch_${batch_id}_success"
     echo "$batch_failed" > "$temp_dir/batch_${batch_id}_failed"
-    echo "✅ [Batch $batch_id] Completed: $batch_success successful, $batch_failed failed"
+    echo "${uploaded_files[*]}" > "$temp_dir/batch_${batch_id}_uploaded"
+    echo "✅ [Batch $batch_id] End: $batch_success succeeded, $batch_failed failed"
 }
 
 # Divide files into chunks for parallel processing
@@ -244,7 +236,7 @@ fi
 
 # Calculate chunk size
 chunk_size=$(( (total_files + upload_parallelism - 1) / upload_parallelism ))
-echo "📦 Dividing $total_files files into chunks of ~$chunk_size files each"
+echo "📦 Creating $upload_parallelism batches (~$chunk_size files each)"
 
 # Start parallel batches
 batch_pids=()
@@ -260,8 +252,6 @@ for ((start=0; start<total_files; start+=chunk_size)); do
     # Extract chunk of files
     batch_files=("${xml_files[@]:$start:$((end-start))}")
     
-    echo "🚀 Starting batch $batch_id with ${#batch_files[@]} files (files $((start+1))-$end)"
-    
     # Start batch process in background
     process_batch "$batch_id" "${batch_files[@]}" &
     batch_pids+=($!)
@@ -270,14 +260,15 @@ for ((start=0; start<total_files; start+=chunk_size)); do
 done
 
 # Wait for all batches to complete
-echo "⏳ Waiting for $batch_id batches to complete..."
 for pid in "${batch_pids[@]}"; do
     wait "$pid"
 done
 
-# Count results from all batches
+# Count results and collect uploaded files from all batches
 success_count=0
 failed_count=0
+all_uploaded_files=()
+
 for ((i=0; i<batch_id; i++)); do
     if [[ -f "$temp_dir/batch_${i}_success" ]]; then
         batch_success=$(cat "$temp_dir/batch_${i}_success")
@@ -287,23 +278,21 @@ for ((i=0; i<batch_id; i++)); do
         batch_failed=$(cat "$temp_dir/batch_${i}_failed")
         failed_count=$((failed_count + batch_failed))
     fi
+    if [[ -f "$temp_dir/batch_${i}_uploaded" ]]; then
+        batch_uploaded=$(cat "$temp_dir/batch_${i}_uploaded")
+        if [[ -n "$batch_uploaded" ]]; then
+            read -ra uploaded_array <<< "$batch_uploaded"
+            all_uploaded_files+=("${uploaded_array[@]}")
+        fi
+    fi
 done
 
-file_count=$total_files
-
 # Summary
-echo ""
-echo "📊 Test Analytics Upload Summary:"
-echo "   Files found: $file_count"
-echo "   Successfully uploaded: $success_count"
-echo "   Failed uploads: $failed_count"
+echo "📊 Summary: $success_count succeeded, $failed_count failed"
+if [[ ${#all_uploaded_files[@]} -gt 0 ]]; then
+    echo "📤 Uploaded files: ${all_uploaded_files[*]}"
+fi
 
-if [[ $file_count -eq 0 ]]; then
-    echo "⚠️  No XML files found matching pattern: $file_pattern"
-    exit 0
-elif [[ $failed_count -gt 0 ]]; then
-    echo "⚠️  Some uploads failed, but continuing build"
-    exit 0
-else
-    echo "🎉 All test results uploaded successfully!"
+if [[ $failed_count -gt 0 ]]; then
+    exit 1
 fi
