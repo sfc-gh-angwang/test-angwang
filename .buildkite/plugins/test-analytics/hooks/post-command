@@ -142,6 +142,14 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
     # Special handling for bazel-testlogs symlink
     echo "🔗 Detected bazel-testlogs pattern, using symlink-aware search"
     
+    # Check if bazel-testlogs directory exists and is accessible
+    if [[ ! -d "bazel-testlogs" ]]; then
+        echo "❌ bazel-testlogs directory not found"
+        exit 1
+    fi
+    
+    echo "📁 Searching for XML files in bazel-testlogs..."
+    
     # Use find with -L to follow symlinks, disable pipefail temporarily to avoid SIGPIPE issues
     set +o pipefail
     while IFS= read -r xml_file; do
@@ -154,17 +162,26 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
             processed_file="$temp_dir/$(basename "$xml_file" .xml)_processed.xml"
             
             # Process XML file (redact if requested, otherwise copy as-is)
-            redact_xml "$xml_file" "$processed_file"
-            
-            # Upload the file
-            if upload_file "$processed_file"; then
-                ((success_count++))
+            echo "🔄 Processing XML file: $xml_file"
+            if redact_xml "$xml_file" "$processed_file"; then
+                echo "✅ XML processing completed"
+                # Upload the file
+                echo "📤 Starting upload..."
+                if upload_file "$processed_file"; then
+                    ((success_count++))
+                    echo "✅ Upload successful"
+                else
+                    ((failed_count++))
+                    echo "❌ Upload failed"
+                fi
             else
+                echo "❌ XML processing failed"
                 ((failed_count++))
             fi
         fi
     done < <(find -L bazel-testlogs -name "*.xml" -type f 2>/dev/null)
     set -o pipefail
+    echo "✅ Completed symlink-aware search"
 else
     # Standard approach for non-symlinked patterns
     while IFS= read -r -d '' xml_file; do
