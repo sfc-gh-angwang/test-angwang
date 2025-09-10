@@ -153,16 +153,21 @@ failed_count=0
 echo "🔍 Processing configured secrets..."
 
 # Get the number of secrets configured
-while [[ -n "${!BUILDKITE_PLUGIN_VAULT_SECRETS_SECRETS_${secret_count}_PATH:-}" ]]; do
+while true; do
     path_var="BUILDKITE_PLUGIN_VAULT_SECRETS_SECRETS_${secret_count}_PATH"
     env_name_var="BUILDKITE_PLUGIN_VAULT_SECRETS_SECRETS_${secret_count}_ENV_NAME"
     field_var="BUILDKITE_PLUGIN_VAULT_SECRETS_SECRETS_${secret_count}_FIELD"
     use_json_var="BUILDKITE_PLUGIN_VAULT_SECRETS_SECRETS_${secret_count}_USE_JSON"
     
-    vault_path="${!path_var}"
-    env_name="${!env_name_var}"
+    vault_path="${!path_var:-}"
+    env_name="${!env_name_var:-}"
     field="${!field_var:-data}"
     use_json="${!use_json_var:-false}"
+    
+    # Break if no more secrets configured
+    if [[ -z "$vault_path" ]]; then
+        break
+    fi
     
     if [[ -n "$vault_path" && -n "$env_name" ]]; then
         # Redact vault path for security - show only last 5 chars
