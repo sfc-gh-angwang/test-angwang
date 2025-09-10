@@ -62,8 +62,8 @@ redact_xml() {
         local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         local python_redactor="$script_dir/../redact_xml.py"
         
-        # Execute Python redaction script with both redaction options enabled
-        if python3 "$python_redactor" "$input_file" "$output_file" --redact-names --redact-output; then
+        # Execute Python redaction script (redacts everything by default)
+        if python3 "$python_redactor" "$input_file" "$output_file"; then
             echo "✅ Successfully redacted $(basename "$input_file")"
         else
             echo "❌ Failed to redact $(basename "$input_file"), copying original file"
@@ -201,11 +201,12 @@ process_batch() {
     
     local batch_success=0
     local batch_failed=0
+    local file_id=1
     
     # Process each file in this batch sequentially
     for xml_file in "${files[@]}"; do
         if [[ -n "$xml_file" && -f "$xml_file" ]]; then
-            local processed_file="$batch_dir/$(basename "$xml_file")"
+            local processed_file="$batch_dir/processed_result_${file_id}.xml"
             
             echo "🔄 [Batch $batch_id] Processing: $(basename "$xml_file")"
             
@@ -223,6 +224,8 @@ process_batch() {
                 echo "❌ [Batch $batch_id] XML processing failed: $(basename "$xml_file")"
                 batch_failed=$((batch_failed + 1))
             fi
+            
+            file_id=$((file_id + 1))
         fi
     done
     
