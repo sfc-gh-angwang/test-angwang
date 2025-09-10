@@ -1,0 +1,36 @@
+name: Vault Secrets
+description: Fetches secrets from HashiCorp Vault
+author: https://github.com/snowflakedb
+requirements:
+  - vault
+  - jq
+  - flock
+
+configuration:
+  properties:
+    secrets:
+      type: array
+      description: List of secrets to fetch from Vault
+      items:
+        type: object
+        properties:
+          path:
+            type: string
+            description: Full Vault secret path (e.g., "secret/jenkins/rt-tests/database-creds")
+          env_name:
+            type: string
+            description: Environment variable name to store the secret value
+          field:
+            type: string
+            description: Field name within the secret (default: "data")
+            default: "data"
+          use_json:
+            type: boolean
+            description: Whether to read this secret in JSON format (default: false)
+            default: false
+        required:
+          - path
+          - env_name
+  required:
+    - secrets
+  additionalProperties: false

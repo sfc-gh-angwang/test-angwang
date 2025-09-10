@@ -1,14 +1,24 @@
 steps:
-  - label: "Run Bazel tests and upload test results with redaction"
+  - label: "Test Vault plugin"
     key: "test-step"
     agents:
       queue: "angwang-test-queue"
-    env:
-      # this is example-test-suite
-      BUILDKITE_ANALYTICS_TOKEN: "DbCqb15hQkNeyu2j2i92y2Gx"
     command: |
-      bazel test //tests/...
+      echo "DUMMY_SECRET: $DUMMY_SECRET"
     plugins:
-      - .buildkite/plugins/test-engine-uploader:
-          file_pattern: "bazel-testlogs/**/*.xml"
-          redact: true
+      - .buildkite/plugins/vault-secrets:
+          path: "/secret/data/jenkins/rt-tests/angwang-dummy-test-secret"
+          env_var: "DUMMY_SECRET"
+  # - label: "Run Bazel tests and upload test results with redaction"
+  #   key: "test-step"
+  #   agents:
+  #     queue: "angwang-test-queue"
+  #   env:
+  #     # this is example-test-suite
+  #     BUILDKITE_ANALYTICS_TOKEN: "DbCqb15hQkNeyu2j2i92y2Gx"
+  #   command: |
+  #     bazel test //tests/...
+  #   plugins:
+  #     - .buildkite/plugins/test-engine-uploader:
+  #         file_pattern: "bazel-testlogs/**/*.xml"
+  #         redact: true
