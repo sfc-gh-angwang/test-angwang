@@ -3,6 +3,9 @@ steps:
     key: "test-step"
     agents:
       queue: "angwang-test-queue"
+    env:
+      # this is example-test-suite
+      BUILDKITE_ANALYTICS_TOKEN: "DbCqb15hQkNeyu2j2i92y2Gx"
     command: |
       bazel test //tests/...
     plugins:

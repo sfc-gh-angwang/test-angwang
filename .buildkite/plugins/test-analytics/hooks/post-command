@@ -7,12 +7,13 @@ set -euo pipefail
 
 echo "📊 Starting test analytics upload process..."
 
-# Get plugin configuration
-file_pattern=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].file_pattern')
-redact=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].redact // false')
-analytics_token_env=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].analytics_token_env // "BUILDKITE_ANALYTICS_TOKEN"')
-upload_timeout=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].upload_timeout // 30')
-max_file_size=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].max_file_size // 10')
+# Get plugin configuration from environment variables
+# Buildkite sets plugin configuration as BUILDKITE_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>
+file_pattern="${BUILDKITE_PLUGIN_TEST_ANALYTICS_FILE_PATTERN:-}"
+redact="${BUILDKITE_PLUGIN_TEST_ANALYTICS_REDACT:-false}"
+analytics_token_env="${BUILDKITE_PLUGIN_TEST_ANALYTICS_ANALYTICS_TOKEN_ENV:-BUILDKITE_ANALYTICS_TOKEN}"
+upload_timeout="${BUILDKITE_PLUGIN_TEST_ANALYTICS_UPLOAD_TIMEOUT:-30}"
+max_file_size="${BUILDKITE_PLUGIN_TEST_ANALYTICS_MAX_FILE_SIZE:-10}"
 
 # Validate required configuration
 if [[ "$file_pattern" == "null" || -z "$file_pattern" ]]; then
@@ -81,8 +82,14 @@ upload_file() {
     
     echo "📤 Uploading $file_name to Buildkite Test Analytics..."
     
-    # Check file size
-    local file_size_mb=$(( $(stat -c%s "$file_path") / 1024 / 1024 ))
+    # Check file size (compatible with both Linux and macOS)
+    local file_size_bytes
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        file_size_bytes=$(stat -f%z "$file_path")
+    else
+        file_size_bytes=$(stat -c%s "$file_path")
+    fi
+    local file_size_mb=$(( file_size_bytes / 1024 / 1024 ))
     if [[ $file_size_mb -gt $max_file_size ]]; then
         echo "⚠️  Skipping $file_name: file size (${file_size_mb}MB) exceeds limit (${max_file_size}MB)"
         return 1
