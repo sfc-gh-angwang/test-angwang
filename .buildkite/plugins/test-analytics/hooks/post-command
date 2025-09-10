@@ -189,7 +189,7 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
         set -e
         
         if [[ -n "$xml_file" && -f "$xml_file" ]]; then
-            ((file_count++))
+            file_count=$((file_count + 1))
             
             echo "📋 Processing file $file_count: $(basename "$xml_file")"
             
@@ -198,28 +198,21 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
             
             # Process XML file (redact if requested, otherwise copy as-is)
             echo "🔄 Processing XML file: $xml_file"
-            echo "🔄 Redact setting: $redact"
-            echo "🔄 Temp file: $processed_file"
-            
-            # Test if we can just copy the file first
-            echo "🧪 Testing simple copy..."
-            if cp "$xml_file" "$processed_file"; then
-                echo "✅ Simple copy successful"
+            if redact_xml "$xml_file" "$processed_file"; then
+                echo "✅ XML processing completed"
                 # Upload the file
                 echo "📤 Starting upload..."
                 if upload_file "$processed_file"; then
-                    ((success_count++))
+                    success_count=$((success_count + 1))
                     echo "✅ Upload successful"
                 else
-                    ((failed_count++))
+                    failed_count=$((failed_count + 1))
                     echo "❌ Upload failed"
                 fi
             else
-                echo "❌ Simple copy failed"
-                ((failed_count++))
+                echo "❌ XML processing failed"
+                failed_count=$((failed_count + 1))
             fi
-            
-            # Skip the redact_xml function for now to isolate the issue
         fi
     done
     
@@ -228,7 +221,7 @@ else
     # Standard approach for non-symlinked patterns
     while IFS= read -r -d '' xml_file; do
         if [[ -f "$xml_file" ]]; then
-            ((file_count++))
+            file_count=$((file_count + 1))
             
             echo "📋 Processing file $file_count: $(basename "$xml_file")"
             
@@ -240,9 +233,9 @@ else
             
             # Upload the file
             if upload_file "$processed_file"; then
-                ((success_count++))
+                success_count=$((success_count + 1))
             else
-                ((failed_count++))
+                failed_count=$((failed_count + 1))
             fi
         fi
     done < <(find . -path "./$file_pattern" -type f -print0 2>/dev/null)
