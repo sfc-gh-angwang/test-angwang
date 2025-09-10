@@ -7,8 +7,9 @@ steps:
       echo "DUMMY_SECRET: $DUMMY_SECRET"
     plugins:
       - .buildkite/plugins/vault-secrets:
-          path: "/secret/data/jenkins/rt-tests/angwang-dummy-test-secret"
-          env_var: "DUMMY_SECRET"
+          secrets:
+            - path: "secret/data/jenkins/rt-tests/angwang-dummy-test-secret"
+              env_name: "DUMMY_SECRET"
   # - label: "Run Bazel tests and upload test results with redaction"
   #   key: "test-step"
   #   agents:
