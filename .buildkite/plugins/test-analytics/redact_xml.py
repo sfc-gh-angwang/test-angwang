@@ -12,9 +12,9 @@ def redact_name(original_name):
     For names > 5 chars, use REDACTED_ + last 5 chars.
     """
     if len(original_name) <= 5:
-        return f"REDACTED_{original_name}"
+        return f"[REDACTED]_{original_name}"
     else:
-        return f"REDACTED_{original_name[-5:]}"
+        return f"[REDACTED]_{original_name[-5:]}"
 
 
 def redact_xml_content(input_file, output_file):
