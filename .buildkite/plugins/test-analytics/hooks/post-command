@@ -41,6 +41,25 @@ fi
 
 echo "🔍 Searching for test files matching pattern: $file_pattern"
 
+# Debug information
+echo "🐛 DEBUG: Current working directory: $(pwd)"
+echo "🐛 DEBUG: Contents of current directory:"
+ls -la
+echo "🐛 DEBUG: Checking if bazel-testlogs exists:"
+if [[ -d "bazel-testlogs" ]]; then
+    echo "   ✅ bazel-testlogs directory exists"
+    echo "🐛 DEBUG: Contents of bazel-testlogs:"
+    find bazel-testlogs -type f -name "*.xml" | head -10
+    echo "🐛 DEBUG: Total XML files in bazel-testlogs:"
+    find bazel-testlogs -type f -name "*.xml" | wc -l
+else
+    echo "   ❌ bazel-testlogs directory does not exist"
+fi
+echo "🐛 DEBUG: Testing find command with pattern:"
+echo "   Command: find . -path \"./$file_pattern\" -type f -print0"
+find . -path "./$file_pattern" -type f | head -5
+echo "🐛 DEBUG: End of debug output"
+
 # Create temporary directory for processed files
 temp_dir=$(mktemp -d)
 cleanup() {
