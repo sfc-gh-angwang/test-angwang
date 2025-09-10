@@ -196,7 +196,6 @@ process_batch() {
     local batch_success=0
     local batch_failed=0
     local file_id=1
-    local uploaded_files=()
     
     # Process each file in this batch sequentially
     for xml_file in "${files[@]}"; do
@@ -208,7 +207,6 @@ process_batch() {
                 # Upload the file
                 if upload_file "$processed_file"; then
                     batch_success=$((batch_success + 1))
-                    uploaded_files+=("processed_result_${file_id}.xml")
                 else
                     batch_failed=$((batch_failed + 1))
                 fi
@@ -223,7 +221,6 @@ process_batch() {
     # Write batch results
     echo "$batch_success" > "$temp_dir/batch_${batch_id}_success"
     echo "$batch_failed" > "$temp_dir/batch_${batch_id}_failed"
-    echo "${uploaded_files[*]}" > "$temp_dir/batch_${batch_id}_uploaded"
     echo "✅ [Batch $batch_id] End: $batch_success succeeded, $batch_failed failed"
 }
 
@@ -264,10 +261,9 @@ for pid in "${batch_pids[@]}"; do
     wait "$pid"
 done
 
-# Count results and collect uploaded files from all batches
+# Count results from all batches
 success_count=0
 failed_count=0
-all_uploaded_files=()
 
 for ((i=0; i<batch_id; i++)); do
     if [[ -f "$temp_dir/batch_${i}_success" ]]; then
@@ -278,20 +274,10 @@ for ((i=0; i<batch_id; i++)); do
         batch_failed=$(cat "$temp_dir/batch_${i}_failed")
         failed_count=$((failed_count + batch_failed))
     fi
-    if [[ -f "$temp_dir/batch_${i}_uploaded" ]]; then
-        batch_uploaded=$(cat "$temp_dir/batch_${i}_uploaded")
-        if [[ -n "$batch_uploaded" ]]; then
-            read -ra uploaded_array <<< "$batch_uploaded"
-            all_uploaded_files+=("${uploaded_array[@]}")
-        fi
-    fi
 done
 
 # Summary
 echo "📊 Summary: $success_count succeeded, $failed_count failed"
-if [[ ${#all_uploaded_files[@]} -gt 0 ]]; then
-    echo "📤 Uploaded files: ${all_uploaded_files[*]}"
-fi
 
 if [[ $failed_count -gt 0 ]]; then
     exit 1
