@@ -8,8 +8,8 @@ from pathlib import Path
 def redact_name(original_name):
     """Redact a name keeping the last 5 characters.
 
-    For names <= 5 chars, prefix with REDACTED_.
-    For names > 5 chars, use REDACTED_ + last 5 chars.
+    For names <= 5 chars, prefix with [REDACTED]_
+    For names > 5 chars, use [REDACTED]_ + last 5 chars.
     """
     if len(original_name) <= 5:
         return f"[REDACTED]_{original_name}"

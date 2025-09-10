@@ -45,7 +45,7 @@ Glob pattern to match JUnit XML files. Examples:
 Whether to redact all sensitive data in the XML files. Defaults to `false`.
 
 When enabled, redacts:
-- **Test names**: `testcase/@name`, `testcase/@classname`, `testsuite/@name`, `testsuites/@name` with `REDACTED_<last_10_chars>`
+- **Test names**: `testcase/@name`, `testcase/@classname`, `testsuite/@name`, `testsuites/@name` with `[REDACTED]_<last_5_chars>`
 - **Test output**: `<failure>`, `<error>`, `<system-out>`, `<system-err>`, `<skipped>` elements and their `@message` attributes
 
 #### `analytics_token_env` (optional)
@@ -59,6 +59,10 @@ Timeout in seconds for each file upload. Defaults to `30`.
 #### `max_file_size` (optional)
 
 Maximum file size in MB to upload. Files larger than this will be skipped. Defaults to `10`.
+
+#### `upload_parallelism` (optional)
+
+Number of parallel upload jobs. Defaults to `5`.
 
 ## Usage Examples
 
@@ -97,6 +101,7 @@ steps:
           analytics_token_env: "CUSTOM_ANALYTICS_TOKEN"
           upload_timeout: 60
           max_file_size: 20
+          upload_parallelism: 8
 ```
 
 ### Multiple Test Types
@@ -116,34 +121,35 @@ steps:
 ## How It Works
 
 1. The plugin runs during the post-command phase after your build/test commands complete
-2. It searches for XML files matching the specified glob pattern
-3. For each found file:
-   - Applies redaction if `redact: true` (creates a processed copy with all sensitive data redacted)
+2. It searches for XML files using both standard and symlink-aware approaches to handle all directory structures
+3. Files are divided into batches for parallel processing based on `upload_parallelism` setting
+4. For each batch of files:
+   - Applies redaction if `redact: true` (creates processed copies with all sensitive data redacted)
    - Checks file size against the limit
-   - Uploads to Buildkite Test Analytics using the provided API
-4. Provides a summary of upload results
+   - Uploads files to Buildkite Test Analytics in parallel
+5. Provides a summary of upload results with success/failure counts
 
 ## Redaction Details
 
 ### Test Name Redaction
-When `redact: true`, the plugin keeps the last 10 characters of test names for identification:
+When `redact: true`, the plugin keeps the last 5 characters of test names for identification:
 ```xml
 <!-- Before -->
 <testcase name="UDFServerTest_TestCreatetUdfClientAfterOom_Test" classname="com.snowflake.UDFServerTest" />
 <testsuite name="UDFServerTest_TestCreatetUdfClientAfterOom_Test" />
 
 <!-- After -->
-<testcase name="REDACTED_Oom_Test" classname="REDACTED_ServerTest" />
-<testsuite name="REDACTED_Oom_Test" />
+<testcase name="[REDACTED]__Test" classname="[REDACTED]_rTest" />
+<testsuite name="[REDACTED]__Test" />
 ```
 
-For names 10 characters or shorter:
+For names 5 characters or shorter:
 ```xml
 <!-- Before -->
 <testcase name="shortTest" classname="TestClass" />
 
 <!-- After -->
-<testcase name="REDACTED_shortTest" classname="REDACTED_TestClass" />
+<testcase name="[REDACTED]_shortTest" classname="[REDACTED]_TestClass" />
 ```
 
 ### Test Output Redaction
@@ -214,8 +220,8 @@ The plugin properly handles symlinked directories (common with Bazel's `bazel-te
 
 The plugin consists of:
 - `plugin.yml`: Plugin configuration and schema
-- `hooks/post-command`: Main upload script with redaction logic
-- `redact_xml.py`: Python script for XML redaction processing
+- `hooks/post-command`: Main upload script with parallel processing and batch management
+- `redact_xml.py`: Simplified Python script that redacts all sensitive data from JUnit XML files
 
 ## License
 
