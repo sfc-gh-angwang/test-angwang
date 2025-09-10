@@ -161,7 +161,7 @@ echo "🔍 Standard search..."
 while IFS= read -r -d '' xml_file; do
     if [[ -f "$xml_file" ]]; then
         unique_files["$xml_file"]=1
-        ((file_count_found++))
+        file_count_found=$((file_count_found + 1))
     fi
 done < <(find ${base_dir:-.} -path "./$file_pattern" -type f -print0 2>/dev/null)
 
@@ -171,7 +171,7 @@ if [[ -n "$base_dir" && -d "$base_dir" ]]; then
     while IFS= read -r -d '' xml_file; do
         if [[ -f "$xml_file" ]]; then
             unique_files["$xml_file"]=1
-            ((file_count_found++))
+            file_count_found=$((file_count_found + 1))
         fi
     done < <(find -L "$base_dir" -name "*.xml" -type f -print0 2>/dev/null)
 fi
@@ -214,14 +214,14 @@ process_batch() {
                 # Upload the file
                 if upload_file "$processed_file"; then
                     echo "✅ [Batch $batch_id] Upload successful: $(basename "$xml_file")"
-                    ((batch_success++))
+                    batch_success=$((batch_success + 1))
                 else
                     echo "❌ [Batch $batch_id] Upload failed: $(basename "$xml_file")"
-                    ((batch_failed++))
+                    batch_failed=$((batch_failed + 1))
                 fi
             else
                 echo "❌ [Batch $batch_id] XML processing failed: $(basename "$xml_file")"
-                ((batch_failed++))
+                batch_failed=$((batch_failed + 1))
             fi
         fi
     done
@@ -263,7 +263,7 @@ for ((start=0; start<total_files; start+=chunk_size)); do
     process_batch "$batch_id" "${batch_files[@]}" &
     batch_pids+=($!)
     
-    ((batch_id++))
+    batch_id=$((batch_id + 1))
 done
 
 # Wait for all batches to complete
