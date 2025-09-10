@@ -1,0 +1,279 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Buildkite Test Engine Upload Plugin
+# Uploads JUnit XML test results to Buildkite Test Engine with optional redaction
+
+# Get plugin configuration from environment variables
+# Buildkite sets plugin configuration as BUILDKITE_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>
+file_pattern="${BUILDKITE_PLUGIN_TEST_ANALYTICS_FILE_PATTERN:-}"
+redact="${BUILDKITE_PLUGIN_TEST_ANALYTICS_REDACT:-false}"
+analytics_token_env="${BUILDKITE_PLUGIN_TEST_ANALYTICS_ANALYTICS_TOKEN_ENV:-BUILDKITE_ANALYTICS_TOKEN}"
+upload_timeout="${BUILDKITE_PLUGIN_TEST_ANALYTICS_UPLOAD_TIMEOUT:-30}"
+max_file_size="${BUILDKITE_PLUGIN_TEST_ANALYTICS_MAX_FILE_SIZE:-10}"
+upload_parallelism="${BUILDKITE_PLUGIN_TEST_ANALYTICS_UPLOAD_PARALLELISM:-5}"
+
+echo "📊 Starting test analytics upload (redact: $redact, parallelism: $upload_parallelism)"
+
+# Validate required configuration
+if [[ "$file_pattern" == "null" || -z "$file_pattern" ]]; then
+    echo "❌ file_pattern is required"
+    exit 1
+fi
+
+# Get analytics token from environment variable
+analytics_token="${!analytics_token_env:-}"
+if [[ -z "$analytics_token" ]]; then
+    echo "❌ BUILDKITE_ANALYTICS_TOKEN not found in environment variable: $analytics_token_env"
+    exit 1
+fi
+
+# Check required tools
+if ! command -v curl &> /dev/null; then
+    echo "❌ curl is not installed or not in PATH"
+    exit 1
+fi
+
+if ! command -v python3 &> /dev/null; then
+    echo "❌ python3 is not installed or not in PATH"
+    exit 1
+fi
+
+echo "🔍 Searching for test files matching pattern: $file_pattern"
+
+# Create temporary directory for processed files
+temp_dir=$(mktemp -d)
+cleanup() {
+    echo "🧹 Cleaning up temporary files..."
+    rm -rf "$temp_dir"
+}
+trap cleanup EXIT
+
+# Function to redact XML content using Python script
+redact_xml() {
+    local input_file="$1"
+    local output_file="$2"
+    
+    if [[ "$redact" == "true" ]]; then
+        # Get the directory where this script is located
+        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        local python_redactor="$script_dir/../redact_xml.py"
+        
+        # Execute Python redaction script (redacts everything by default)
+        if python3 "$python_redactor" "$input_file" "$output_file"; then
+            # Redaction successful, continue silently
+            true
+        else
+            echo "❌ Failed to redact $(basename "$input_file"), skipping upload"
+            return 1
+        fi
+    else
+        # No redaction requested, copy as-is
+        cp "$input_file" "$output_file"
+    fi
+}
+
+# Function to upload file to Buildkite Test Analytics
+upload_file() {
+    local file_path="$1"
+    local file_name=$(basename "$file_path")
+        
+    # Check file size (compatible with both Linux and macOS)
+    local file_size_bytes
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        file_size_bytes=$(stat -f%z "$file_path")
+    else
+        file_size_bytes=$(stat -c%s "$file_path")
+    fi
+    local file_size_mb=$(( file_size_bytes / 1024 / 1024 ))
+    if [[ $file_size_mb -gt $max_file_size ]]; then
+        echo "⚠️  Skipping $file_name: file size (${file_size_mb}MB) exceeds limit (${max_file_size}MB)"
+        return 1
+    fi
+    
+    # Upload with curl
+    local upload_response
+    if upload_response=$(curl -s -w "%{http_code}" --max-time "$upload_timeout" \
+        -X POST \
+        -H "Authorization: Token token=$analytics_token" \
+        -F "format=junit" \
+        -F "data=@$file_path" \
+        -F "run_env[CI]=buildkite" \
+        -F "run_env[key]=$BUILDKITE_BUILD_ID" \
+        -F "run_env[number]=$BUILDKITE_BUILD_NUMBER" \
+        -F "run_env[job_id]=$BUILDKITE_JOB_ID" \
+        -F "run_env[branch]=$BUILDKITE_BRANCH" \
+        -F "run_env[commit_sha]=$BUILDKITE_COMMIT" \
+        -F "run_env[message]=$BUILDKITE_MESSAGE" \
+        -F "run_env[url]=$BUILDKITE_BUILD_URL" \
+        https://analytics-api.buildkite.com/v1/uploads 2>/dev/null); then
+        
+        local http_code="${upload_response: -3}"
+        local response_body="${upload_response%???}"
+        
+        if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+            return 0
+        else
+            echo "❌ Failed to upload $file_name (HTTP $http_code)"
+            if [[ -n "$response_body" ]]; then
+                echo "   Response: $response_body"
+            fi
+            return 1
+        fi
+    else
+        echo "❌ Failed to upload $file_name (curl error or timeout)"
+        return 1
+    fi
+}
+
+# Find and process XML files
+file_count=0
+success_count=0
+failed_count=0
+
+# Use find with the glob pattern (handle symlinks properly)
+# Use both native and symlink-aware search, then union the results
+
+# Extract base directory from pattern (everything before the first **)
+base_dir=""
+if [[ "$file_pattern" == *"**"* ]]; then
+    base_dir="${file_pattern%%/**}"
+    file_suffix="${file_pattern#**/}"
+else
+    file_suffix="$file_pattern"
+fi
+
+# Collect files from both approaches
+declare -A unique_files
+standard_count=0
+symlink_count=0
+
+# Approach 1: Standard find (without following symlinks)
+while IFS= read -r -d '' xml_file; do
+    if [[ -f "$xml_file" ]]; then
+        unique_files["$xml_file"]=1
+        standard_count=$((standard_count + 1))
+    fi
+done < <(find ${base_dir:-.} -path "./$file_pattern" -type f -print0 2>/dev/null)
+
+# Approach 2: Symlink-aware search (if base directory exists and might be symlinked)
+if [[ -n "$base_dir" && -d "$base_dir" ]]; then
+    while IFS= read -r -d '' xml_file; do
+        if [[ -f "$xml_file" ]]; then
+            unique_files["$xml_file"]=1
+            symlink_count=$((symlink_count + 1))
+        fi
+    done < <(find -L "$base_dir" -name "*.xml" -type f -print0 2>/dev/null)
+fi
+
+# Convert unique files to array
+xml_files=()
+for file in "${!unique_files[@]}"; do
+    xml_files+=("$file")
+done
+
+echo "📁 Found ${#xml_files[@]} XML files (standard: $standard_count, symlink: $symlink_count)"
+
+
+# Function to process a batch of files
+process_batch() {
+    local batch_id="$1"
+    shift  # Remove batch_id from arguments, remaining args are the files
+    local files=("$@")
+    
+    echo "🔄 [Batch $batch_id] Start processing ${#files[@]} files"
+    
+    # Create subdirectory for this batch to avoid collisions
+    local batch_dir="$temp_dir/batch_${batch_id}"
+    mkdir -p "$batch_dir"
+    
+    local batch_success=0
+    local batch_failed=0
+    local file_id=1
+    
+    # Process each file in this batch sequentially
+    for xml_file in "${files[@]}"; do
+        if [[ -n "$xml_file" && -f "$xml_file" ]]; then
+            local processed_file="$batch_dir/processed_result_${file_id}.xml"
+            
+            # Process XML file (redact if requested, otherwise copy as-is)
+            if redact_xml "$xml_file" "$processed_file"; then
+                # Upload the file
+                if upload_file "$processed_file"; then
+                    batch_success=$((batch_success + 1))
+                else
+                    batch_failed=$((batch_failed + 1))
+                fi
+            else
+                batch_failed=$((batch_failed + 1))
+            fi
+            
+            file_id=$((file_id + 1))
+        fi
+    done
+    
+    # Write batch results
+    echo "$batch_success" > "$temp_dir/batch_${batch_id}_success"
+    echo "$batch_failed" > "$temp_dir/batch_${batch_id}_failed"
+    echo "✅ [Batch $batch_id] End: $batch_success succeeded, $batch_failed failed"
+}
+
+# Divide files into chunks for parallel processing
+total_files=${#xml_files[@]}
+if [[ $total_files -eq 0 ]]; then
+    echo "⚠️ No files to process"
+    exit 0
+fi
+
+# Calculate chunk size
+chunk_size=$(( (total_files + upload_parallelism - 1) / upload_parallelism ))
+echo "📦 Creating $upload_parallelism batches (~$chunk_size files each)"
+
+# Start parallel batches
+batch_pids=()
+batch_id=0
+
+for ((start=0; start<total_files; start+=chunk_size)); do
+    # Get chunk of files for this batch
+    end=$((start + chunk_size))
+    if [[ $end -gt $total_files ]]; then
+        end=$total_files
+    fi
+    
+    # Extract chunk of files
+    batch_files=("${xml_files[@]:$start:$((end-start))}")
+    
+    # Start batch process in background
+    process_batch "$batch_id" "${batch_files[@]}" &
+    batch_pids+=($!)
+    
+    batch_id=$((batch_id + 1))
+done
+
+# Wait for all batches to complete
+for pid in "${batch_pids[@]}"; do
+    wait "$pid"
+done
+
+# Count results from all batches
+success_count=0
+failed_count=0
+
+for ((i=0; i<batch_id; i++)); do
+    if [[ -f "$temp_dir/batch_${i}_success" ]]; then
+        batch_success=$(cat "$temp_dir/batch_${i}_success")
+        success_count=$((success_count + batch_success))
+    fi
+    if [[ -f "$temp_dir/batch_${i}_failed" ]]; then
+        batch_failed=$(cat "$temp_dir/batch_${i}_failed")
+        failed_count=$((failed_count + batch_failed))
+    fi
+done
+
+# Summary
+echo "📊 Summary: $success_count succeeded, $failed_count failed"
+
+if [[ $failed_count -gt 0 ]]; then
+    exit 1
+fi
