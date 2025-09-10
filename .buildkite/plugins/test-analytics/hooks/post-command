@@ -172,7 +172,7 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
     # Extract the pattern after bazel-testlogs/
     pattern_suffix="${file_pattern#*bazel-testlogs/}"
     echo "🐛 DEBUG: Pattern suffix: $pattern_suffix"
-    echo "🐛 DEBUG: Using command: find -L bazel-testlogs -path \"*/$pattern_suffix\" -type f"
+    echo "🐛 DEBUG: Using simplified command: find -L bazel-testlogs -name \"*.xml\" -type f"
     # Use find with -L to follow symlinks
     while IFS= read -r -d '' xml_file; do
         if [[ -f "$xml_file" ]]; then
@@ -193,7 +193,7 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
                 ((failed_count++))
             fi
         fi
-    done < <(find -L bazel-testlogs -path "*/$pattern_suffix" -type f -print0 2>/dev/null)
+    done < <(find -L bazel-testlogs -name "*.xml" -type f -print0 2>/dev/null)
 else
     # Standard approach for non-symlinked patterns
     while IFS= read -r -d '' xml_file; do
