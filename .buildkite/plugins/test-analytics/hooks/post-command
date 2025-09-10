@@ -58,6 +58,15 @@ fi
 echo "🐛 DEBUG: Testing find command with pattern:"
 echo "   Command: find . -path \"./$file_pattern\" -type f -print0"
 find . -path "./$file_pattern" -type f | head -5
+echo "🐛 DEBUG: Alternative find approaches:"
+echo "   1. Direct find in bazel-testlogs:"
+find bazel-testlogs -name "*.xml" -type f 2>/dev/null | head -5
+echo "   2. Find with -L (follow symlinks):"
+find -L bazel-testlogs -name "*.xml" -type f 2>/dev/null | head -5
+echo "   3. All files in bazel-testlogs (any type):"
+find bazel-testlogs -type f 2>/dev/null | head -10
+echo "   4. Directory structure of bazel-testlogs:"
+find bazel-testlogs -type d 2>/dev/null | head -10
 echo "🐛 DEBUG: End of debug output"
 
 # Create temporary directory for processed files
@@ -156,26 +165,58 @@ success_count=0
 failed_count=0
 
 # Use find with the glob pattern (handle symlinks properly)
-while IFS= read -r -d '' xml_file; do
-    if [[ -f "$xml_file" ]]; then
-        ((file_count++))
-        
-        echo "📋 Processing file $file_count: $(basename "$xml_file")"
-        
-        # Create processed file in temp directory
-        processed_file="$temp_dir/$(basename "$xml_file" .xml)_processed.xml"
-        
-        # Process XML file (redact if requested, otherwise copy as-is)
-        redact_xml "$xml_file" "$processed_file"
-        
-        # Upload the file
-        if upload_file "$processed_file"; then
-            ((success_count++))
-        else
-            ((failed_count++))
+# Try multiple approaches to handle symlinks correctly
+if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
+    # Special handling for bazel-testlogs symlink
+    echo "🔗 Detected bazel-testlogs pattern, using symlink-aware search"
+    # Extract the pattern after bazel-testlogs/
+    pattern_suffix="${file_pattern#*bazel-testlogs/}"
+    echo "🐛 DEBUG: Pattern suffix: $pattern_suffix"
+    echo "🐛 DEBUG: Using command: find -L bazel-testlogs -path \"*/$pattern_suffix\" -type f"
+    # Use find with -L to follow symlinks
+    while IFS= read -r -d '' xml_file; do
+        if [[ -f "$xml_file" ]]; then
+            ((file_count++))
+            
+            echo "📋 Processing file $file_count: $(basename "$xml_file")"
+            
+            # Create processed file in temp directory
+            processed_file="$temp_dir/$(basename "$xml_file" .xml)_processed.xml"
+            
+            # Process XML file (redact if requested, otherwise copy as-is)
+            redact_xml "$xml_file" "$processed_file"
+            
+            # Upload the file
+            if upload_file "$processed_file"; then
+                ((success_count++))
+            else
+                ((failed_count++))
+            fi
         fi
-    fi
-done < <(find . -path "./$file_pattern" -type f -print0 2>/dev/null)
+    done < <(find -L bazel-testlogs -path "*/$pattern_suffix" -type f -print0 2>/dev/null)
+else
+    # Standard approach for non-symlinked patterns
+    while IFS= read -r -d '' xml_file; do
+        if [[ -f "$xml_file" ]]; then
+            ((file_count++))
+            
+            echo "📋 Processing file $file_count: $(basename "$xml_file")"
+            
+            # Create processed file in temp directory
+            processed_file="$temp_dir/$(basename "$xml_file" .xml)_processed.xml"
+            
+            # Process XML file (redact if requested, otherwise copy as-is)
+            redact_xml "$xml_file" "$processed_file"
+            
+            # Upload the file
+            if upload_file "$processed_file"; then
+                ((success_count++))
+            else
+                ((failed_count++))
+            fi
+        fi
+    done < <(find . -path "./$file_pattern" -type f -print0 2>/dev/null)
+fi
 
 # Summary
 echo ""
