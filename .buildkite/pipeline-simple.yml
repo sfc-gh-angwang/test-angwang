@@ -9,6 +9,6 @@ steps:
     command: |
       bazel test //tests/...
     plugins:
-      - .buildkite/plugins/test-analytics:
+      - .buildkite/plugins/test-engine-uploader:
           file_pattern: "bazel-testlogs/**/*.xml"
           redact: true
