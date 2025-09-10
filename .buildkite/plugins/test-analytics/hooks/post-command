@@ -41,34 +41,6 @@ fi
 
 echo "🔍 Searching for test files matching pattern: $file_pattern"
 
-# Debug information
-echo "🐛 DEBUG: Current working directory: $(pwd)"
-echo "🐛 DEBUG: Contents of current directory:"
-ls -la
-echo "🐛 DEBUG: Checking if bazel-testlogs exists:"
-if [[ -d "bazel-testlogs" ]]; then
-    echo "   ✅ bazel-testlogs directory exists"
-    echo "🐛 DEBUG: Contents of bazel-testlogs:"
-    find bazel-testlogs -type f -name "*.xml" | head -10
-    echo "🐛 DEBUG: Total XML files in bazel-testlogs:"
-    find bazel-testlogs -type f -name "*.xml" | wc -l
-else
-    echo "   ❌ bazel-testlogs directory does not exist"
-fi
-echo "🐛 DEBUG: Testing find command with pattern:"
-echo "   Command: find . -path \"./$file_pattern\" -type f -print0"
-find . -path "./$file_pattern" -type f | head -5
-echo "🐛 DEBUG: Alternative find approaches:"
-echo "   1. Direct find in bazel-testlogs:"
-find bazel-testlogs -name "*.xml" -type f 2>/dev/null | head -5
-echo "   2. Find with -L (follow symlinks):"
-find -L bazel-testlogs -name "*.xml" -type f 2>/dev/null | head -5
-echo "   3. All files in bazel-testlogs (any type):"
-find bazel-testlogs -type f 2>/dev/null | head -10
-echo "   4. Directory structure of bazel-testlogs:"
-find bazel-testlogs -type d 2>/dev/null | head -10
-echo "🐛 DEBUG: End of debug output"
-
 # Create temporary directory for processed files
 temp_dir=$(mktemp -d)
 cleanup() {
@@ -169,13 +141,11 @@ failed_count=0
 if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
     # Special handling for bazel-testlogs symlink
     echo "🔗 Detected bazel-testlogs pattern, using symlink-aware search"
-    # Extract the pattern after bazel-testlogs/
-    pattern_suffix="${file_pattern#*bazel-testlogs/}"
-    echo "🐛 DEBUG: Pattern suffix: $pattern_suffix"
-    echo "🐛 DEBUG: Using simplified command: find -L bazel-testlogs -name \"*.xml\" -type f"
-    # Use find with -L to follow symlinks
-    while IFS= read -r -d '' xml_file; do
-        if [[ -f "$xml_file" ]]; then
+    
+    # Use find with -L to follow symlinks, disable pipefail temporarily to avoid SIGPIPE issues
+    set +o pipefail
+    while IFS= read -r xml_file; do
+        if [[ -n "$xml_file" && -f "$xml_file" ]]; then
             ((file_count++))
             
             echo "📋 Processing file $file_count: $(basename "$xml_file")"
@@ -193,7 +163,8 @@ if [[ "$file_pattern" == *"bazel-testlogs"* ]]; then
                 ((failed_count++))
             fi
         fi
-    done < <(find -L bazel-testlogs -name "*.xml" -type f -print0 2>/dev/null)
+    done < <(find -L bazel-testlogs -name "*.xml" -type f 2>/dev/null)
+    set -o pipefail
 else
     # Standard approach for non-symlinked patterns
     while IFS= read -r -d '' xml_file; do
