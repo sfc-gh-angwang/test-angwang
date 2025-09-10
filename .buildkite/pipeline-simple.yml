@@ -1,9 +1,11 @@
 steps:
-  - label: "test step"
-    command: |
-      # Method 1: Set environment variable in the command
-      export TEST_ENV=test_env
+  - label: "Run Bazel tests and upload test results with redaction"
     key: "test-step"
-    timeout_in_minutes: 60
     agents:
-      queue: "test-agent"
+      queue: "angwang-test-queue"
+    command: |
+      bazel test //tests/...
+    plugins:
+      - .buildkite/plugins/test-analytics:
+          file_pattern: "bazel-testlogs/**/*.xml"
+          redact: true

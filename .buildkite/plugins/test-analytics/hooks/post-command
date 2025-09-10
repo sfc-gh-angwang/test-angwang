@@ -1,0 +1,169 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Buildkite Test Analytics Upload Plugin
+# Uploads JUnit XML test results to Buildkite Test Analytics with optional redaction
+
+echo "📊 Starting test analytics upload process..."
+
+# Get plugin configuration
+file_pattern=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].file_pattern')
+redact=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].redact // false')
+analytics_token_env=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].analytics_token_env // "BUILDKITE_ANALYTICS_TOKEN"')
+upload_timeout=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].upload_timeout // 30')
+max_file_size=$(echo "${BUILDKITE_PLUGINS}" | jq -r '.["test-analytics"].max_file_size // 10')
+
+# Validate required configuration
+if [[ "$file_pattern" == "null" || -z "$file_pattern" ]]; then
+    echo "❌ file_pattern is required"
+    exit 1
+fi
+
+# Get analytics token from environment variable
+analytics_token="${!analytics_token_env:-}"
+if [[ -z "$analytics_token" ]]; then
+    echo "❌ Analytics token not found in environment variable: $analytics_token_env"
+    exit 1
+fi
+
+# Check required tools
+if ! command -v curl &> /dev/null; then
+    echo "❌ curl is not installed or not in PATH"
+    exit 1
+fi
+
+if ! command -v python3 &> /dev/null; then
+    echo "❌ python3 is not installed or not in PATH"
+    exit 1
+fi
+
+echo "🔍 Searching for test files matching pattern: $file_pattern"
+
+# Create temporary directory for processed files
+temp_dir=$(mktemp -d)
+cleanup() {
+    echo "🧹 Cleaning up temporary files..."
+    rm -rf "$temp_dir"
+}
+trap cleanup EXIT
+
+# Function to redact XML content using Python script
+redact_xml() {
+    local input_file="$1"
+    local output_file="$2"
+    
+    if [[ "$redact" == "true" ]]; then
+        echo "🔒 Redacting all sensitive data in $(basename "$input_file")..."
+        
+        # Get the directory where this script is located
+        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        local python_redactor="$script_dir/../redact_xml.py"
+        
+        # Execute Python redaction script with both redaction options enabled
+        if python3 "$python_redactor" "$input_file" "$output_file" --redact-names --redact-output; then
+            echo "✅ Successfully redacted $(basename "$input_file")"
+        else
+            echo "❌ Failed to redact $(basename "$input_file"), copying original file"
+            cp "$input_file" "$output_file"
+            return 1
+        fi
+    else
+        echo "📋 No redaction requested, copying $(basename "$input_file") as-is"
+        cp "$input_file" "$output_file"
+    fi
+}
+
+# Function to upload file to Buildkite Test Analytics
+upload_file() {
+    local file_path="$1"
+    local file_name=$(basename "$file_path")
+    
+    echo "📤 Uploading $file_name to Buildkite Test Analytics..."
+    
+    # Check file size
+    local file_size_mb=$(( $(stat -c%s "$file_path") / 1024 / 1024 ))
+    if [[ $file_size_mb -gt $max_file_size ]]; then
+        echo "⚠️  Skipping $file_name: file size (${file_size_mb}MB) exceeds limit (${max_file_size}MB)"
+        return 1
+    fi
+    
+    # Upload with curl
+    local upload_response
+    if upload_response=$(curl -s -w "%{http_code}" --max-time "$upload_timeout" \
+        -X POST \
+        -H "Authorization: Token token=$analytics_token" \
+        -F "format=junit" \
+        -F "data=@$file_path" \
+        -F "run_env[CI]=buildkite" \
+        -F "run_env[key]=$BUILDKITE_BUILD_ID" \
+        -F "run_env[number]=$BUILDKITE_BUILD_NUMBER" \
+        -F "run_env[job_id]=$BUILDKITE_JOB_ID" \
+        -F "run_env[branch]=$BUILDKITE_BRANCH" \
+        -F "run_env[commit_sha]=$BUILDKITE_COMMIT" \
+        -F "run_env[message]=$BUILDKITE_MESSAGE" \
+        -F "run_env[url]=$BUILDKITE_BUILD_URL" \
+        https://analytics-api.buildkite.com/v1/uploads 2>/dev/null); then
+        
+        local http_code="${upload_response: -3}"
+        local response_body="${upload_response%???}"
+        
+        if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+            echo "✅ Successfully uploaded $file_name (HTTP $http_code)"
+            return 0
+        else
+            echo "❌ Failed to upload $file_name (HTTP $http_code)"
+            if [[ -n "$response_body" ]]; then
+                echo "   Response: $response_body"
+            fi
+            return 1
+        fi
+    else
+        echo "❌ Failed to upload $file_name (curl error or timeout)"
+        return 1
+    fi
+}
+
+# Find and process XML files
+file_count=0
+success_count=0
+failed_count=0
+
+# Use find with the glob pattern (handle symlinks properly)
+while IFS= read -r -d '' xml_file; do
+    if [[ -f "$xml_file" ]]; then
+        ((file_count++))
+        
+        echo "📋 Processing file $file_count: $(basename "$xml_file")"
+        
+        # Create processed file in temp directory
+        processed_file="$temp_dir/$(basename "$xml_file" .xml)_processed.xml"
+        
+        # Process XML file (redact if requested, otherwise copy as-is)
+        redact_xml "$xml_file" "$processed_file"
+        
+        # Upload the file
+        if upload_file "$processed_file"; then
+            ((success_count++))
+        else
+            ((failed_count++))
+        fi
+    fi
+done < <(find . -path "./$file_pattern" -type f -print0 2>/dev/null)
+
+# Summary
+echo ""
+echo "📊 Test Analytics Upload Summary:"
+echo "   Files found: $file_count"
+echo "   Successfully uploaded: $success_count"
+echo "   Failed uploads: $failed_count"
+
+if [[ $file_count -eq 0 ]]; then
+    echo "⚠️  No XML files found matching pattern: $file_pattern"
+    exit 0
+elif [[ $failed_count -gt 0 ]]; then
+    echo "⚠️  Some uploads failed, but continuing build"
+    exit 0
+else
+    echo "🎉 All test results uploaded successfully!"
+fi
