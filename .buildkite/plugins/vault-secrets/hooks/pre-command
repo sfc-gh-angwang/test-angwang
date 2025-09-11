@@ -73,8 +73,13 @@ get_cred() {
         local field=data
     fi
 
-    local value="$(vault_with_retry kv get -field "$field" "${@}" "$vault_path")"
-    output "export ${env_name}='${value}'"
+    local value
+    if value="$(vault_with_retry kv get -field "$field" "$vault_path" 2>/dev/null)"; then
+        output "export ${env_name}='${value}'"
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Function to get JSON credentials from Vault
@@ -82,16 +87,36 @@ get_json_cred(){
     local vault_path="${1}"; shift
     local env_name="${1}"; shift
 
-    local value="$(vault_with_retry kv get --format=json "${@}" "$vault_path")"
-    output "export ${env_name}='${value}'"
+    local value
+    if value="$(vault_with_retry kv get --format=json "$vault_path" 2>/dev/null)"; then
+        output "export ${env_name}='${value}'"
+        return 0
+    else
+        return 1
+    fi
 }
 
-# Uses flock to synchronize writes to stdout
+# Create a temporary file to store export statements
+export_file=$(mktemp)
+
+# Uses flock to synchronize writes to export file (if available)
 # Why? 'echo' is not always atomic and can cause the output to be interleaved.
 # https://stackoverflow.com/questions/9926616/is-echo-atomic-when-writing-single-lines
 output() { 
-    flock /tmp/vault_lockfile -c "echo \"$1\""; 
+    if command -v flock &> /dev/null; then
+        flock /tmp/vault_lockfile -c "echo \"$1\" >> \"$export_file\""
+    else
+        echo "$1" >> "$export_file"
+    fi
 }
+
+# Cleanup function to remove temporary file
+cleanup_export_file() {
+    if [[ -f "$export_file" ]]; then
+        rm -f "$export_file"
+    fi
+}
+trap cleanup_export_file EXIT
 
 # Determine authentication method based on user
 if [[ $USER != jenkins ]]; then
@@ -142,7 +167,6 @@ else
     echo "✅ Successfully authenticated with AppRole"
 fi
 
-# Export the token for use by subsequent commands
 output "export VAULT_TOKEN='${VAULT_TOKEN}'"
 
 # Process configured secrets
@@ -213,3 +237,9 @@ if [[ $success_count -eq 0 ]]; then
 fi
 
 echo "🔐 Vault secrets setup completed successfully"
+
+# Source the export file to set environment variables for the main command
+if [[ -f "$export_file" && -s "$export_file" ]]; then
+    echo "🔧 Setting environment variables from fetched secrets"
+    # Source the file in the current shell so variables are available to the main command
+    source "$export_file"
