@@ -169,7 +169,8 @@ else
     echo "✅ Successfully authenticated with AppRole"
 fi
 
-output "export VAULT_TOKEN='${VAULT_TOKEN}'"
+# Note: VAULT_TOKEN is already exported to current shell, no need to export to temp file
+# The temp file should only contain the actual secrets fetched from Vault
 
 # Process configured secrets
 secret_count=0
