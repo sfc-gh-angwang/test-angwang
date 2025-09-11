@@ -6,7 +6,6 @@ steps:
     command: |
       echo "=== Debug DUMMY variable ==="
       echo "DUMMY from Vault: '${DUMMY:-NOT_SET}'"
-      echo "DUMMY length: ${#DUMMY}"
       env | grep DUMMY || echo "No DUMMY variables found in environment"
       echo "=== Setting DUMMY manually ==="
       export DUMMY=bbb
