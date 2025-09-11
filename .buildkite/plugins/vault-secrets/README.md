@@ -120,13 +120,12 @@ steps:
 - Use environment variables to pass sensitive authentication data
 - AppRole credentials are automatically managed for Jenkins users
 - Non-Jenkins users must provide valid tokens externally
-- All output is synchronized using flock to prevent credential leakage
+- All output is handled securely to prevent credential leakage
 
 ## Requirements
 
 - `vault`: Vault CLI binary (expected at `/opt/sfc/vault/` by default)
 - `jq`: For parsing JSON responses from Vault
-- `flock`: For atomic output operations
 
 ## Error Handling
 
@@ -135,7 +134,7 @@ The plugin includes robust error handling based on Snowflake's production setup:
 - **Retry Logic**: All Vault operations use 3-retry logic with 5-second intervals
 - **Token Validation**: Automatic token TTL checking with fail-fast on expiration
 - **Environment Detection**: Smart authentication method selection
-- **Atomic Output**: Thread-safe credential export using flock
+- **Secure Output**: Safe credential export to temporary files
 - **Clear Error Messages**: Detailed troubleshooting information
 
 ## Troubleshooting

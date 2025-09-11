@@ -75,7 +75,7 @@ get_cred() {
 
     local value
     if value="$(vault_with_retry kv get -field "$field" "$vault_path" 2>&1)"; then
-        output "export ${env_name}='${value}'"
+        export "${env_name}=${value}"
         return 0
     else
         echo "❌ Vault error: $value" >&2
@@ -90,7 +90,7 @@ get_json_cred(){
 
     local value
     if value="$(vault_with_retry kv get --format=json "$vault_path" 2>&1)"; then
-        output "export ${env_name}='${value}'"
+        export "${env_name}=${value}"
         return 0
     else
         echo "❌ Vault error: $value" >&2
@@ -98,28 +98,6 @@ get_json_cred(){
     fi
 }
 
-# Create a temporary file to store export statements
-export_file=$(mktemp)
-
-# Uses flock to synchronize writes to export file (if available)
-# Why? 'echo' is not always atomic and can cause the output to be interleaved.
-# https://stackoverflow.com/questions/9926616/is-echo-atomic-when-writing-single-lines
-output() { 
-    # Write export statements to temp file
-    if command -v flock &> /dev/null; then
-        flock /tmp/vault_lockfile -c "echo \"$1\" >> \"$export_file\""
-    else
-        echo "$1" >> "$export_file"
-    fi
-}
-
-# Cleanup function to remove temporary file
-cleanup_export_file() {
-    if [[ -f "$export_file" ]]; then
-        rm -f "$export_file"
-    fi
-}
-trap cleanup_export_file EXIT
 
 # Determine authentication method based on user
 if [[ $USER != jenkins ]]; then
@@ -242,12 +220,4 @@ fi
 
 echo "🔐 Vault secrets setup completed successfully" >&2
 
-# Source the export file to set environment variables in current shell
-# The environment hook runs in the same shell as the main command
-if [[ -f "$export_file" && -s "$export_file" ]]; then
-    echo "🔧 Setting environment variables from fetched secrets" >&2
-    # Source the file to actually set the environment variables
-    source "$export_file"
-else
-    echo "⚠️  No secrets were exported" >&2
-fi
+echo "🔧 Environment variables have been set for fetched secrets" >&2
