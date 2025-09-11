@@ -245,3 +245,6 @@ if [[ -f "$export_file" && -s "$export_file" ]]; then
     echo "🔧 Setting environment variables from fetched secrets"
     # Source the file in the current shell so variables are available to the main command
     source "$export_file"
+else
+    echo "⚠️  No secrets were exported"
+fi
