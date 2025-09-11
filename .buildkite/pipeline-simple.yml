@@ -4,9 +4,7 @@ steps:
     agents:
       queue: "angwang-test-queue"
     command: |
-      echo "=== Debug DUMMY variable ==="
-      echo "DUMMY from Vault:" "$$DUMMY"
-      env | grep DUMMY || echo "No DUMMY variables found in environment"
+      .buildkite/set_env.sh
     plugins:
       - .buildkite/plugins/vault-secrets:
           secrets:
