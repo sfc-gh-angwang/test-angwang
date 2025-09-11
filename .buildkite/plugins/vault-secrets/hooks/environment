@@ -13,7 +13,7 @@ vault_role_id="${VAULT_ROLE_ID:-}"
 vault_secret_id="${VAULT_SECRET_ID:-}"
 skip_verify="${VAULT_SKIP_VERIFY:-1}"
 
-echo "🔐 Starting Vault secrets setup"
+echo "🔐 Starting Vault secrets setup" >&2
 
 # Set up Vault environment
 export PATH="$PATH:$vault_path"
@@ -177,7 +177,7 @@ secret_count=0
 success_count=0
 failed_count=0
 
-echo "🔍 Processing configured secrets..."
+echo "🔍 Processing configured secrets..." >&2
 
 # Get the number of secrets configured
 while true; do
@@ -201,7 +201,7 @@ while true; do
         redacted_path="[REDACTED_VAULT_SECRET_PATH]_${vault_path: -5}"
         
         if [[ "$use_json" == "true" ]]; then
-            echo "📥 Fetching secret from vault: $redacted_path -> $env_name (JSON mode)"
+            echo "📥 Fetching secret from vault: $redacted_path -> $env_name (JSON mode)" >&2
             if get_json_cred "$vault_path" "$env_name"; then
                 success_count=$((success_count + 1))
                 echo "✅ Successfully fetched JSON secret: $redacted_path"
@@ -210,7 +210,7 @@ while true; do
                 echo "❌ Failed to fetch JSON secret: $redacted_path"
             fi
         else
-            echo "📥 Fetching secret from vault: $redacted_path -> $env_name (field: $field)"
+            echo "📥 Fetching secret from vault: $redacted_path -> $env_name (field: $field)" >&2
             if get_cred "$vault_path" "$env_name" "$field"; then
                 success_count=$((success_count + 1))
                 echo "✅ Successfully fetched secret: $redacted_path (field: $field)"
@@ -239,13 +239,13 @@ if [[ $success_count -eq 0 ]]; then
     echo "⚠️  No secrets configured to fetch"
 fi
 
-echo "🔐 Vault secrets setup completed successfully"
+echo "🔐 Vault secrets setup completed successfully" >&2
 
-# Source the export file to set environment variables for the main command
+# Output only the fetched secrets to stdout for Buildkite environment hook
 if [[ -f "$export_file" && -s "$export_file" ]]; then
-    echo "🔧 Setting environment variables from fetched secrets"
-    # Source the file in the current shell so variables are available to the main command
-    source "$export_file"
+    echo "🔧 Setting environment variables from fetched secrets" >&2
+    # Output the export statements to stdout (Buildkite will parse these)
+    cat "$export_file"
 else
-    echo "⚠️  No secrets were exported"
+    echo "⚠️  No secrets were exported" >&2
 fi
