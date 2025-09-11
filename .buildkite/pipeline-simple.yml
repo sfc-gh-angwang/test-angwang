@@ -4,14 +4,14 @@ steps:
     agents:
       queue: "angwang-test-queue"
     command: |
-      echo "DUMMY_SECRET: $DUMMY_SECRET"
-      export DUMMY_SECRET=bbb
-      echo "DUMMY_SECRET: $DUMMY_SECRET"
+      echo "DUMMY: $DUMMY"
+      export DUMMY=bbb
+      echo "DUMMY: $DUMMY"
     plugins:
       - .buildkite/plugins/vault-secrets:
           secrets:
             - path: "secret/jenkins/rt-tests/angwang-dummy-test-secret"
-              env_name: "DUMMY_SECRET"
+              env_name: "DUMMY"
   # - label: "Run Bazel tests and upload test results with redaction"
   #   key: "test-step"
   #   agents:
