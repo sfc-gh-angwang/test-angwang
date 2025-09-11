@@ -12,8 +12,26 @@ vault_path="${VAULT_PATH:-/opt/sfc/vault/}"
 vault_role_id="${VAULT_ROLE_ID:-}"
 vault_secret_id="${VAULT_SECRET_ID:-}"
 skip_verify="${VAULT_SKIP_VERIFY:-1}"
+cred_file="${BUILDKITE_PLUGIN_VAULT_SECRETS_CRED_FILE:-}"
 
 echo "🔐 Starting Vault secrets setup" >&2
+
+# Validate cred_file parameter
+if [[ -z "$cred_file" ]]; then
+    echo "❌ cred_file parameter is required"
+    exit 1
+fi
+
+# Create the credential file and any necessary parent directories
+cred_dir="$(dirname "$cred_file")"
+if [[ ! -d "$cred_dir" ]]; then
+    echo "📁 Creating directory: $cred_dir" >&2
+    mkdir -p "$cred_dir"
+fi
+
+# Initialize the credential file
+echo "# Vault secrets exported on $(date)" > "$cred_file"
+echo "🔧 Credential file initialized: $cred_file" >&2
 
 # Set up Vault environment (only for this script, don't export to Buildkite)
 PATH="$PATH:$vault_path"
@@ -63,7 +81,7 @@ vault_with_retry() {
     VAULT_MAX_RETRIES=0 retry 3 vault "$@"
 }
 
-# Function to get credentials from Vault
+# Function to get credentials from Vault and write to file
 get_cred() {
     local vault_path="${1}"; shift
     local env_name="${1}"; shift
@@ -75,7 +93,8 @@ get_cred() {
 
     local value
     if value="$(vault_with_retry kv get -field "$field" "$vault_path" 2>&1)"; then
-        export "${env_name}=${value}"
+        # Write export statement to credential file
+        echo "export ${env_name}='${value}'" >> "$cred_file"
         return 0
     else
         echo "❌ Vault error: $value" >&2
@@ -83,14 +102,17 @@ get_cred() {
     fi
 }
 
-# Function to get JSON credentials from Vault
+# Function to get JSON credentials from Vault and write to file
 get_json_cred(){
     local vault_path="${1}"; shift
     local env_name="${1}"; shift
 
     local value
     if value="$(vault_with_retry kv get --format=json "$vault_path" 2>&1)"; then
-        export "${env_name}=${value}"
+        # Escape single quotes in JSON for safe shell export
+        local escaped_value="${value//\'/\'\"\'\"\'}"
+        # Write export statement to credential file
+        echo "export ${env_name}='${escaped_value}'" >> "$cred_file"
         return 0
     else
         echo "❌ Vault error: $value" >&2
@@ -220,4 +242,5 @@ fi
 
 echo "🔐 Vault secrets setup completed successfully" >&2
 
-echo "🔧 Environment variables have been set for fetched secrets" >&2
+echo "🔧 Export statements written to credential file: $cred_file" >&2
+echo "💡 To load these credentials, run: source $cred_file" >&2

@@ -30,6 +30,10 @@ configuration:
         required:
           - path
           - env_name
+    cred_file:
+      type: string
+      description: Path to the credential file where export statements will be written
   required:
     - secrets
+    - cred_file
   additionalProperties: false
