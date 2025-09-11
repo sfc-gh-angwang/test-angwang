@@ -4,11 +4,11 @@ steps:
     agents:
       queue: "angwang-test-queue"
     command: |
-      cat /tmp/vault
+      echo "DUMMY_SECRET: $DUMMY_SECRET"
+      export DUMMY_SECRET=bbb
       echo "DUMMY_SECRET: $DUMMY_SECRET"
     plugins:
       - .buildkite/plugins/vault-secrets:
-          cred_file: "/tmp/vault"
           secrets:
             - path: "secret/jenkins/rt-tests/angwang-dummy-test-secret"
               env_name: "DUMMY_SECRET"
