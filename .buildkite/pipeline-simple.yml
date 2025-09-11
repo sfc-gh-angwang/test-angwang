@@ -8,7 +8,7 @@ steps:
     plugins:
       - .buildkite/plugins/vault-secrets:
           secrets:
-            - path: "secret/data/jenkins/rt-tests/angwang-dummy-test-secret"
+            - path: "secret/jenkins/rt-tests/angwang-dummy-test-secret"
               env_name: "DUMMY_SECRET"
   # - label: "Run Bazel tests and upload test results with redaction"
   #   key: "test-step"
