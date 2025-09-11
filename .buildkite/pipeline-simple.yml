@@ -4,7 +4,7 @@ steps:
     agents:
       queue: "angwang-test-queue"
     command: |
-      source /tmp/vault
+      cat /tmp/vault
       echo "DUMMY_SECRET: $DUMMY_SECRET"
     plugins:
       - .buildkite/plugins/vault-secrets:
