@@ -16,7 +16,6 @@ skip_verify="${VAULT_SKIP_VERIFY:-1}"
 echo "🔐 Starting Vault secrets setup" >&2
 
 # Set up Vault environment (only for this script, don't export to Buildkite)
-PATH="$PATH:$vault_path"
 VAULT_SKIP_VERIFY="$skip_verify"
 VAULT_ADDR="$vault_addr"
 VAULT_ROLE_ID="$vault_role_id"
