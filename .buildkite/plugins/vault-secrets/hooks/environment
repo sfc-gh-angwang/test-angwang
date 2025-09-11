@@ -15,12 +15,12 @@ skip_verify="${VAULT_SKIP_VERIFY:-1}"
 
 echo "🔐 Starting Vault secrets setup" >&2
 
-# Set up Vault environment
-export PATH="$PATH:$vault_path"
-export VAULT_SKIP_VERIFY="$skip_verify"
-export VAULT_ADDR="$vault_addr"
-export VAULT_ROLE_ID="$vault_role_id"
-export VAULT_SECRET_ID="$vault_secret_id"
+# Set up Vault environment (only for this script, don't export to Buildkite)
+PATH="$PATH:$vault_path"
+VAULT_SKIP_VERIFY="$skip_verify"
+VAULT_ADDR="$vault_addr"
+VAULT_ROLE_ID="$vault_role_id"
+VAULT_SECRET_ID="$vault_secret_id"
 
 # Check if vault command is available
 if ! command -v vault &> /dev/null; then
@@ -105,6 +105,7 @@ export_file=$(mktemp)
 # Why? 'echo' is not always atomic and can cause the output to be interleaved.
 # https://stackoverflow.com/questions/9926616/is-echo-atomic-when-writing-single-lines
 output() { 
+    # Write export statements to temp file
     if command -v flock &> /dev/null; then
         flock /tmp/vault_lockfile -c "echo \"$1\" >> \"$export_file\""
     else
@@ -165,7 +166,7 @@ else
         exit 1
     fi
     
-    export VAULT_TOKEN
+    # VAULT_TOKEN is set for this script only, not exported to Buildkite
     echo "✅ Successfully authenticated with AppRole"
 fi
 
@@ -241,11 +242,12 @@ fi
 
 echo "🔐 Vault secrets setup completed successfully" >&2
 
-# Output only the fetched secrets to stdout for Buildkite environment hook
+# Source the export file to set environment variables in current shell
+# The environment hook runs in the same shell as the main command
 if [[ -f "$export_file" && -s "$export_file" ]]; then
     echo "🔧 Setting environment variables from fetched secrets" >&2
-    # Output the export statements to stdout (Buildkite will parse these)
-    cat "$export_file"
+    # Source the file to actually set the environment variables
+    source "$export_file"
 else
     echo "⚠️  No secrets were exported" >&2
 fi
